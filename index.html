@@ -1184,12 +1184,12 @@ VIEWS.serp = {
     const org = f.filter(r => r.sec === 'organic_results'), lk = f.filter(r => has(r.link)), nq = new Set(all.map(r => r.q)).size;
     const posC = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(p => org.filter(r => r.pos === p).length), lkS = bySec.map(([k]) => [k, lk.filter(r => r.sec === k).length]), qi = sampleIdx(byQ.length, 24);
     return [
-      { l: 'Results shown', n: f.length, unit: 'results', s: 'of ' + fmt(all.length) + '. Line shows results per search type', pill: share(f.length, all.length), spark: { v: bySec.map(x => x[1]), l: bySec.map(x => secLabel(x[0])) } },
-      { l: 'Negative results', n: sc[1], unit: 'results', s: 'Line shows Positive, Negative and Neutral', pill: { t: pct(sc[1], f.length) + ' of shown', up: null, act: c => { c.state.multi.sent.add('Negative'); } }, spark: { v: sc, l: SENTS } },
       { l: 'Queries covered', n: byQ.length, unit: 'of ' + fmt(nq), s: 'Line shows results per query, largest first', spark: { v: qi.map(i => byQ[i][1]), l: qi.map(i => byQ[i][0]) } },
       { l: 'Volume covered', n: sumV, unit: '/mo', s: 'Monthly searches across the queries shown. Line shows the 20 highest', pill: share(sumV, totV), spark: { v: qv.slice(0, 20).map(x => x[1]), l: qv.slice(0, 20).map(x => x[0]) } },
-      { l: 'Distinct domains', n: new Set(f.filter(r => r.dom).map(r => r.dom)).size, unit: 'domains', s: 'Line shows the 16 most frequent, google.com excluded', spark: { v: byD.slice(0, 16).map(x => x[1]), l: byD.slice(0, 16).map(x => x[0]) } },
-      { l: 'Organic results', n: org.length, unit: 'results', s: 'Line shows organic results by position 1 to 10', pill: { t: pct(org.length, f.length) + ' of shown', up: null, act: c => { c.state.multi.sec.add('organic_results'); } }, spark: { v: posC, l: posC.map((_, i) => 'Position ' + (i + 1)) } }];
+      { l: 'Results shown', n: f.length, unit: 'results', s: 'of ' + fmt(all.length) + '. Line shows results per search type', pill: share(f.length, all.length), spark: { v: bySec.map(x => x[1]), l: bySec.map(x => secLabel(x[0])) } },
+      { l: 'Organic results', n: org.length, unit: 'results', s: 'Line shows organic results by position 1 to 10', pill: { t: pct(org.length, f.length) + ' of shown', up: null, act: c => { c.state.multi.sec.add('organic_results'); } }, spark: { v: posC, l: posC.map((_, i) => 'Position ' + (i + 1)) } },
+      { l: 'Negative results', n: sc[1], unit: 'results', s: 'Line shows Positive, Negative and Neutral', pill: { t: pct(sc[1], f.length) + ' of shown', up: null, act: c => { c.state.multi.sent.add('Negative'); } }, spark: { v: sc, l: SENTS } },
+      { l: 'Distinct domains', n: new Set(f.filter(r => r.dom).map(r => r.dom)).size, unit: 'domains', s: 'Line shows the 16 most frequent, google.com excluded', spark: { v: byD.slice(0, 16).map(x => x[1]), l: byD.slice(0, 16).map(x => x[0]) } }];
   },
   charts: [
     { title: 'Sentiment', kind: 'dial', unit: 'results', sub: 'Positive, Negative or Neutral, judged from the title and snippet. Click to filter.', filterKey: 'sent', pctOfTotal: true, build: rows => SENTS.map(x => ({ key: x, label: x, value: rows.filter(r => r.sent === x).length, color: SENT_COLOR[x] })) },
