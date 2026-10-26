@@ -676,7 +676,7 @@ function initView(cfg) {
       const m = new Map();
       cfg.rows.forEach(r => { const v = f.get(r); (Array.isArray(v) ? v : [v]).forEach(x => { if (has(x)) m.set(x, (m.get(x) || 0) + 1); }); });
       let opts = [...m.keys()];
-      if (Array.isArray(f.order)) opts = f.order.filter(x => m.has(x)); else if (f.order === 'alpha') opts.sort((a, b) => String(a).localeCompare(String(b))); else opts.sort((a, b) => m.get(b) - m.get(a) || String(a).localeCompare(String(b)));
+      if (Array.isArray(f.order)) opts = f.keepAll ? f.order.slice() : f.order.filter(x => m.has(x)); else if (f.order === 'alpha') opts.sort((a, b) => String(a).localeCompare(String(b))); else opts.sort((a, b) => m.get(b) - m.get(a) || String(a).localeCompare(String(b)));
       f.opts = opts; f.total = m;
     } else if (f.type === 'range') st.range[f.key] = { min: '', max: '' };
     else st.bool[f.key] = false;
@@ -1086,11 +1086,28 @@ function openDomainModal(kind, domain) {
 }
 const citeItem = (r, d) => h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px' }, h('span', { class: 'tag t6' }, r.prov), r.fav ? h('span', { class: 'tag ' + SENT_TAG[r.fav] }, r.fav) : h('span', { class: 'tag tn' }, 'No brand sentiment'), r.pub && r.pub !== 'Not found' ? h('span', { class: 'note' }, r.pub) : null),
   h('div', { class: 'strong' }, r.cite ? ext(r.url, r.cite) : h('span', { class: 'dim' }, '(no citation)')), h('div', { class: 'note' }, r.biz.replace('Adani ', '') + ' #' + r.pn + ' · ' + shortP(r.prompt, 90)), d);
-function openCiteDomainModal(domain) {
-  const cfg = VIEWS.cites, all = cfg.rows.filter(r => r.dom === domain), base = (cfg.filtered || cfg.rows).filter(r => r.dom === domain);
+function openCiteDomainModal(domain, scope) {
+  const cfg = VIEWS.cites, all = cfg.rows.filter(r => r.dom === domain), base = (scope || cfg.filtered || cfg.rows).filter(r => r.dom === domain);
   const groups = [{ key: 'fav', name: 'Brand sentiment', get: r => r.fav, items: FAVLBL, color: x => SENT_COLOR[x] }, { key: 'prov', name: 'Provider', get: r => r.prov, items: countVals(base, r => r.prov).map(x => x[0]) }];
   openGroupModal({ cfg, kind: 'cites', title: domain, noun: 'citations', all, base, groups, item: citeItem, sumNote: '',
     apply: (c, sel) => { c.state.multi.dom.add(domain); groups.forEach(g => sel[g.key].forEach(x => c.state.multi[g.key].add(x))); } });
+}
+
+/* Domain, Website type and Sentiment: one line per cited domain, built from the citations in `rows` */
+function citeDomainTable(el, rows, scope) {
+  const m = new Map();
+  rows.forEach(r => { if (!r.dom) return; let g = m.get(r.dom); if (!g) m.set(r.dom, g = { d: r.dom, n: 0, types: new Map(), sents: new Map(), none: 0 }); g.n++; if (r.wt) g.types.set(r.wt, (g.types.get(r.wt) || 0) + 1); if (r.fav) g.sents.set(r.fav, (g.sents.get(r.fav) || 0) + 1); else g.none++; });
+  const list = [...m.values()].sort((a, b) => b.n - a.n || a.d.localeCompare(b.d)), total = list.reduce((a, x) => a + x.n, 0);
+  const open = x => () => openCiteDomainModal(x.d, rows);
+  const tb = h('tbody', null, list.map(x => h('tr', { 'data-i': 1, tabindex: '0', onclick: open(x), onkeydown: e => { if (e.key === 'Enter') open(x)(); } },
+    h('td', { class: 'strong', style: 'overflow-wrap:anywhere;min-width:170px' }, x.d),
+    h('td', null, h('div', { class: 'tags' }, [...x.types].sort((a, b) => b[1] - a[1]).map(([c, k]) => h('span', { class: 'tag t' + tagIdx(c) }, c + ' · ' + fmt(k))))),
+    h('td', null, h('div', { class: 'tags' }, FAVLBL.filter(s => x.sents.has(s)).map(s => h('span', { class: 'tag ' + SENT_TAG[s] }, s + ' · ' + fmt(x.sents.get(s)))), x.none ? h('span', { class: 'tag tn' }, 'No brand sentiment · ' + fmt(x.none)) : null)),
+    overallCell(x.sents, ['Unfavourable', 'Neutral', 'Favourable']),
+    h('td', { class: 'num' }, fmt(x.n)))));
+  el.replaceChildren(
+    h('div', { class: 'thead' }, h('div', null, h('h2', null, 'Domain, Website type and Sentiment'), h('div', { class: 'sub' }, 'One line for each Domain, with its Website type, Brand sentiment and Overall sentiment (the most common one). ' + scope + ' Click a line to see all of its citations.')), h('span', { class: 'note' }, fmt(list.length) + ' domains · ' + fmt(total) + ' citations')),
+    list.length ? h('div', { class: 'tscroll cscroll' }, h('table', { style: 'min-width:640px' }, h('thead', null, h('tr', null, ['Domain', 'Website type', 'Brand sentiment', 'Overall', 'Citations'].map((x, k) => h('th', { class: k === 4 ? 'num' : '' }, x)))), tb)) : h('div', { class: 'empty' }, 'No citations match the current filters.'));
 }
 
 /* ---------- navigation between views ---------- */
@@ -1100,6 +1117,10 @@ function pickMulti(cfg, key, val) { cfg.state.multi[key].add(val); }
 /* ---------- view configs ---------- */
 const colRow = { key: 'row', label: 'No.', cls: 'rn', cell: r => r.r, sort: 'row' };
 const dash = () => h('span', { class: 'dim' }, '–');
+/* overall sentiment of a domain: the sentiment with the most entries (a tie goes to the first one in `order`) */
+const overallCell = (sents, order) => { let best = null; order.forEach(k => { const n = sents.get(k) || 0; if (n && (!best || n > best[1])) best = [k, n]; }); return h('td', null, best ? h('span', { class: 'tag ' + SENT_TAG[best[0]] }, best[0] + ' · ' + fmt(best[1])) : dash()); };
+const SO_SCORES = SO.filter(r => r.score != null).map(r => r.score);
+const SO_NEG_NOTE = 'Sentiment of the sources shown. Click to filter. Negative is listed but no source has it: the lowest Sentiment score is ' + Math.min(...SO_SCORES) + ' and Negative starts at -15.';
 const ext = (url, kids, style, cls) => safeUrl(url) ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', class: 'xl ' + (cls || ''), style, title: 'Open ' + url, onclick: e => e.stopPropagation() }, kids) : h('span', { class: cls, style }, kids);
 const featChips = (f, max) => h('div', { class: 'tags' }, f.slice(0, max).map(x => h('span', { class: 'tag t1' }, x)), f.length > max ? h('span', { class: 'tag t2' }, '+' + (f.length - max)) : null);
 const volCell = v => [h('span', { class: 'vbar' }, h('i', { style: 'width:' + (Math.sqrt(v / MAXVOL) * 100) + '%' })), fmt(v)];
@@ -1278,6 +1299,8 @@ VIEWS.cites = {
     { title: 'Citations by Website type', sub: 'Top 10 Website type values. Click to filter.', filterKey: 'wt', limit: 10, build: rows => countBy(rows.filter(r => r.wt), r => r.wt).map(([k, v]) => ({ key: k, label: k, value: v })) },
     { title: 'Top domains', sub: 'Top 10 Domain values. Click a domain to see its citations.', limit: 10, build: rows => countBy(rows.filter(r => r.dom), r => r.dom).map(([k, v]) => ({ key: k, label: k, value: v, onOpen: () => openCiteDomainModal(k) })) },
   ],
+  extraTitle: 'Domain, Website type and Sentiment',
+  extra: (cfg, el) => citeDomainTable(el, cfg.filtered, 'Counts the citations shown.'),
   detail: r => [
     h('div', { class: 'bubble me' }, r.prompt),
     h('h3', null, r.cite || '(no citation)'),
@@ -1298,7 +1321,7 @@ VIEWS.sources = {
   filters: [
     { type: 'multi', key: 'biz', label: 'Business', get: r => r.biz },
     { type: 'multi', key: 'brand', label: 'Brand or competitor', get: r => r.brand || '(blank)' },
-    { type: 'multi', key: 'sent', label: 'Sentiment', get: r => r.sent || '(blank)', order: ['Positive', 'Neutral', '(blank)'] },
+    { type: 'multi', key: 'sent', label: 'Sentiment', get: r => r.sent || '(blank)', order: ['Positive', 'Negative', 'Neutral', '(blank)'], keepAll: true },
     { type: 'multi', key: 'wt', label: 'Website type', get: r => r.wt },
     { type: 'range', key: 'cit', label: 'Citations', get: r => r.cit },
     { type: 'range', key: 'cov', label: 'Domain coverage (%)', get: r => r.cov },
@@ -1326,7 +1349,7 @@ VIEWS.sources = {
   },
   charts: [
     { title: 'Citations by Website type', sub: 'Citations added up for each Website type. Click to filter.', filterKey: 'wt', limit: 10, build: rows => countBy(rows, r => r.wt).map(([k]) => [k, sumOf(rows.filter(r => r.wt === k), r => r.cit)]).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ key: k, label: k, value: v })) },
-    { title: 'Sentiment', kind: 'dial', unit: 'domains', sub: 'Sentiment of the sources shown. Click to filter.', filterKey: 'sent', pctOfTotal: true, build: rows => [['Positive', 'Positive'], ['Neutral', 'Neutral'], ['(blank)', '']].map(([k, v]) => ({ key: k, label: k, value: rows.filter(r => r.sent === v).length, color: k === '(blank)' ? 'var(--s-none)' : SENT_COLOR[k] })) },
+    { title: 'Sentiment', kind: 'dial', unit: 'domains', sub: SO_NEG_NOTE, filterKey: 'sent', pctOfTotal: true, build: rows => [['Positive', 'Positive'], ['Negative', 'Negative'], ['Neutral', 'Neutral'], ['(blank)', '']].map(([k, v]) => ({ key: k, label: k, value: rows.filter(r => r.sent === v).length, color: k === '(blank)' ? 'var(--s-none)' : SENT_COLOR[k] })) },
     { title: 'Brand or competitor', sub: 'Click to filter.', filterKey: 'brand', pctOfTotal: true, build: rows => countBy(rows, r => r.brand || '(blank)').map(([k, v]) => ({ key: k, label: k, value: v })) },
     { title: 'Most cited domains', sub: 'Top 10 by Citations. Click to open its pages.', build: rows => [...rows].sort((a, b) => b.cit - a.cit).slice(0, 10).map(r => ({ key: r.r, label: r.dom, value: r.cit, onOpen: () => openRow(VIEWS.sources, r) })) },
   ],
@@ -1468,10 +1491,11 @@ VIEWS.serp = {
       h('td', { class: 'strong', style: 'overflow-wrap:anywhere' }, x.d),
       h('td', null, h('div', { class: 'tags' }, [...x.types].sort((a, b) => b[1] - a[1]).map(([c, n]) => h('span', { class: 'tag t' + tagIdx(c) }, c + ' · ' + fmt(n))))),
       h('td', null, h('div', { class: 'tags' }, SENTS.filter(t => x.sents.has(t)).map(t => h('span', { class: 'tag ' + SENT_TAG[t] }, t + ' · ' + fmt(x.sents.get(t)))))),
+      overallCell(x.sents, ['Negative', 'Neutral', 'Positive']),
       h('td', { class: 'num' }, fmt(x.n)))));
     el.replaceChildren(
-      h('div', { class: 'thead' }, h('div', null, h('h2', null, 'Domain, Search type and Sentiment'), h('div', { class: 'sub' }, 'One line for each domain, with its search types and Sentiment. Click a line to see all of its results.')), h('span', { class: 'note' }, fmt(list.length) + ' domains · ' + fmt(cfg.filtered.length) + ' results')),
-      list.length ? h('div', { class: 'tscroll cscroll' }, h('table', { style: 'min-width:640px' }, h('thead', null, h('tr', null, ['Domain', 'Search type', 'Sentiment', 'Results'].map((t, i) => h('th', { class: i === 3 ? 'num' : '' }, t)))), tb)) : h('div', { class: 'empty' }, 'No results match the current filters.'));
+      h('div', { class: 'thead' }, h('div', null, h('h2', null, 'Domain, Search type and Sentiment'), h('div', { class: 'sub' }, 'One line for each domain, with its search types, Sentiment and Overall sentiment (the most common one). Click a line to see all of its results.')), h('span', { class: 'note' }, fmt(list.length) + ' domains · ' + fmt(cfg.filtered.length) + ' results')),
+      list.length ? h('div', { class: 'tscroll cscroll' }, h('table', { style: 'min-width:640px' }, h('thead', null, h('tr', null, ['Domain', 'Search type', 'Sentiment', 'Overall', 'Results'].map((t, i) => h('th', { class: i === 4 ? 'num' : '' }, t)))), tb)) : h('div', { class: 'empty' }, 'No results match the current filters.'));
   },
   detail: r => {
     const ex = (r.extra || '').split(' | ').map(x => x.split(/:\s(.*)/s)).filter(x => x[0]);
@@ -1533,10 +1557,11 @@ VIEWS.brand = {
       h('td', { class: 'strong' }, x.d),
       h('td', null, h('div', { class: 'tags' }, [...x.cats].sort((a, b) => b[1] - a[1]).map(([c, n]) => h('span', { class: 'tag t' + tagIdx(c) }, c + ' · ' + fmt(n))))),
       h('td', null, h('div', { class: 'tags' }, SENTS.filter(t => x.sents.has(t)).map(t => h('span', { class: 'tag ' + SENT_TAG[t] }, t + ' · ' + fmt(x.sents.get(t)))))),
+      overallCell(x.sents, ['Negative', 'Neutral', 'Positive']),
       h('td', { class: 'num' }, fmt(x.n)))));
     el.replaceChildren(
-      h('div', { class: 'thead' }, h('div', null, h('h2', null, 'Domain, Category and Sentiment'), h('div', { class: 'sub' }, 'One line for each Domain, with its Categories and Sentiment. Click a line to see all of its mentions.')), h('span', { class: 'note' }, fmt(list.length) + ' domains · ' + fmt(cfg.filtered.length) + ' mentions')),
-      list.length ? h('div', { class: 'tscroll cscroll' }, h('table', { style: 'min-width:640px' }, h('thead', null, h('tr', null, ['Domain', 'Category', 'Sentiment', 'Mentions'].map((t, i) => h('th', { class: i === 3 ? 'num' : '' }, t)))), tb)) : h('div', { class: 'empty' }, 'No mentions match the current filters.'));
+      h('div', { class: 'thead' }, h('div', null, h('h2', null, 'Domain, Category and Sentiment'), h('div', { class: 'sub' }, 'One line for each Domain, with its Categories, Sentiment and Overall sentiment (the most common one). Click a line to see all of its mentions.')), h('span', { class: 'note' }, fmt(list.length) + ' domains · ' + fmt(cfg.filtered.length) + ' mentions')),
+      list.length ? h('div', { class: 'tscroll cscroll' }, h('table', { style: 'min-width:640px' }, h('thead', null, h('tr', null, ['Domain', 'Category', 'Sentiment', 'Overall', 'Mentions'].map((t, i) => h('th', { class: i === 4 ? 'num' : '' }, t)))), tb)) : h('div', { class: 'empty' }, 'No mentions match the current filters.'));
   },
   detail: r => [
     h('div', { class: 'plat' }, h('span', { class: 'avatar t' + tagIdx(r.domain) }, (r.domain[0] || '?').toUpperCase()), h('div', null, h('b', null, r.domain), h('div', { class: 'note' }, r.cat))),
@@ -1546,6 +1571,11 @@ VIEWS.brand = {
     h('button', { class: 'btn', onclick: () => jump('brand', c => pickMulti(c, 'cat', r.cat)) }, 'Show only ' + r.cat),
   ],
 };
+/* the same table on the other Prompt List tables, built from the citations behind the rows shown */
+VIEWS.prompts.extraTitle = VIEWS.sources.extraTitle = VIEWS.pages.extraTitle = 'Domain, Website type and Sentiment';
+VIEWS.prompts.extra = (cfg, el) => { const k = new Set(cfg.filtered.map(p => p.biz + '|' + p.n)); citeDomainTable(el, CI.filter(c => k.has(c.prm)), 'Counts the citations behind the prompts shown.'); };
+VIEWS.sources.extra = (cfg, el) => { const k = new Set(cfg.filtered.map(r => r.biz + '|' + r.dom)); citeDomainTable(el, CI.filter(c => c.dom && k.has(c.biz + '|' + c.dom)), 'Counts the citations of the sources shown.'); };
+VIEWS.pages.extra = (cfg, el) => { const k = new Set(cfg.filtered.map(r => r.biz + '|' + r.url)); citeDomainTable(el, CI.filter(c => c.url && k.has(c.biz + '|' + c.url)), 'Counts the citations of the pages shown.'); };
 { const _i = initView, _r = resetState; initView = cfg => { _i(cfg); if (cfg.defaults) cfg.defaults(cfg.state); }; resetState = cfg => { _r(cfg); if (cfg.defaults) cfg.defaults(cfg.state); }; }
 ['prompts', 'cites', 'sources', 'pages', 'serp', 'brand'].forEach(k => initView(VIEWS[k]));
 
