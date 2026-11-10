@@ -12,6 +12,11 @@ A single-page dashboard for exploring search visibility data for the Adani brand
   - **Pages**: 1,911 cited pages with URL, Title, Times cited and Brand or competitor.
 - **Keyword Analysis**: 9,129 search results for 428 queries, with each query's Volume and Theme, plus section, position, title, link, domain, source, snippet, date and extra.
 - **Brand Mention**: 293 mentions with Title, Content, Source, Domain and Category.
+- **Research**: four sub-tabs, each with search, sort, dropdown filters, charts and a detail panel.
+  - **Keywords**: 34,973 rows with Platform, Keyword, Position, Intent, Position Type, SERP Type, Sentiment and Theme.
+  - **Backlink Sentiments**: 25,542 rows across 19 columns.
+  - **RAW Backlinks**: 25,212 rows as exported, with any cells beyond the Comment column shown in "More cells".
+  - **Prompts Matrix**: the planning tables for sentiment, language and required keywords, volume and prompts.
 
 ## Features
 
@@ -30,4 +35,5 @@ A single-page dashboard for exploring search visibility data for the Adani brand
 - **Sources sentiment** is Positive or Neutral only. Negative is listed in the chart and filter, but no source has it: the lowest Sentiment score is -5 and Negative starts at -15.
 - **Website type** labels can differ between the Citations and Sources exports for the same domain. Each table keeps its own labels.
 - **Dates.** Only 1,466 of the 9,129 Keyword Analysis results carry a date. Relative dates such as "2 months ago" are placed using late October 2026.
+- **Research** data is stored compressed inside the page and unpacked the first time each sub-tab is opened (about a second). About 1,050 RAW Backlinks rows have cells shifted by one column and some text is garbled in the original; both are shown as exported. Dates display as YYYY-MM-DD. Intent and SERP Type filters merge capitalisation variants; tables show the raw values. The empty "Keywords" block is noted under Prompts Matrix.
 - Fonts load from Google Fonts. Everything else is self-contained.
