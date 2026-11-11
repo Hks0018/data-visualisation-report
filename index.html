@@ -521,6 +521,31 @@ button.mrow:hover { background: rgba(5,82,156,.06); }
 .mx .card { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .dtab tfoot td { padding: 8px; border-top: 1px solid var(--line); }
 .loading { padding: 28px 24px; display: flex; flex-direction: column; gap: 8px; }
+
+/* dashboard */
+.dash{display:flex;flex-direction:column;gap:26px;min-width:0}
+.dscope{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}.dscope .note{flex:1 1 320px}
+.dsec{display:flex;flex-direction:column;gap:14px;min-width:0;scroll-margin-top:90px}
+.dhead{display:flex;gap:14px;align-items:flex-start}
+.dhead h2{margin:0;font-family:var(--font-head);font-size:19px;letter-spacing:-.01em}
+.dlet{flex:none;width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:600 15px var(--font-head)}
+.dchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.dchip{font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(5,82,156,.09);color:var(--accent-ink);border:1px solid transparent}
+.dchip.off{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.stat.na .l{max-width:62%}.stat.na .s{margin-top:8px}
+.dtrend .tcol{cursor:default}.wide{flex:1 1 100%!important}
+.dtrend{display:flex;flex-direction:column;gap:12px}
+.dweek{display:flex;flex-direction:column;gap:12px}
+.wkhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.wknet{display:flex;align-items:baseline;gap:8px}.wknet b{font-family:var(--font-head);font-size:34px;letter-spacing:-.02em;line-height:1}.wknet span{font-size:12px;color:var(--muted)}
+.wkgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.wkc{border:1px solid var(--line);border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wkc b{font-family:var(--font-head);font-size:22px;line-height:1.1}.wkc small{color:var(--muted);font-size:11.5px}
+.wkl{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--fg-2)}
+.sbar{display:flex;height:10px;border-radius:6px;overflow:hidden;gap:2px}.sbar i{display:block;height:100%}
+.dtab tr.hl td{background:rgba(34,173,197,.12)}
+.gov{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--fg-2)}
+@media (max-width:560px){.wkgrid{grid-template-columns:1fr}}
 </style>
 
 </head>
@@ -1827,6 +1852,212 @@ VIEWS.rmx = {
   },
 };
 
+/* ---------- dashboard ---------- */
+const DAY = 864e5, AS_OF = Date.UTC(2026, 9, 26), MON_S = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dShort = ts => new Date(ts).getUTCDate() + ' ' + MON_S[new Date(ts).getUTCMonth()];
+const dFull = ts => dShort(ts) + ' ' + new Date(ts).getUTCFullYear();
+const P100 = (a, b) => b ? Math.round(a / b * 100) : 0;
+const FAV2S = { Favourable: 'Positive', Neutral: 'Neutral', Unfavourable: 'Negative' };
+const DNAMES = { cit: { Positive: 'Favourable', Neutral: 'Neutral', Negative: 'Unfavourable' }, ser: { Positive: 'Positive', Neutral: 'Neutral', Negative: 'Negative' } };
+const DSRC = {
+  cit: { label: 'Citations', noun: 'citations', how: 'Brand sentiment of each citation, by its Published date.', rows: CI.filter(r => r.fav && /^\d{4}-\d\d-\d\d/.test(r.pub)).map(r => ({ ts: Date.parse(r.pub.slice(0, 10)), s: FAV2S[r.fav], biz: r.biz })).filter(r => r.ts <= AS_OF) },
+  ser: { label: 'Search results', noun: 'results', how: 'Sentiment of each Keyword Analysis result, by its date.', rows: SERP.filter(r => r.ts != null).map(r => ({ ts: Math.floor(r.ts / DAY) * DAY, s: r.sent, biz: null })).filter(r => r.ts <= AS_OF) },
+};
+const DASH = { biz: 'All', src: 'cit', per: '30', mode: 'count' };
+const DPER = [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['all', 'Last 24 months']];
+let dashN = 0;
+
+function dBuckets(per) {
+  if (per === 'all') {
+    const out = [{ label: 'Earlier', full: 'Before Nov 2024', from: -Infinity, to: Date.UTC(2024, 10, 1) }];
+    for (let i = 0; i < 24; i++) { const y = 2024 + Math.floor((10 + i) / 12), m = (10 + i) % 12; out.push({ label: MON_S[m] + (m === 0 || i === 0 ? ' ’' + String(y).slice(2) : ''), full: MON_S[m] + ' ' + y, from: Date.UTC(y, m, 1), to: Date.UTC(y, m + 1, 1) }); }
+    return out;
+  }
+  const n = +per, step = n <= 7 ? 1 : n <= 30 ? 3 : 7, out = [];
+  for (let i = n - 1; i >= 0; i--) { const t = AS_OF - i * DAY; out.push({ label: dShort(t), full: dFull(t), from: t, to: t + DAY, show: i % step === 0 }); }
+  return out;
+}
+function tally(rows) { const a = { Positive: 0, Neutral: 0, Negative: 0, n: 0 }; rows.forEach(r => { a[r.s]++; a.n++; }); return a; }
+function trendPlot(bk, rows, share, nm, mini) {
+  const agg = bk.map(() => ({ Positive: 0, Neutral: 0, Negative: 0, n: 0 }));
+  rows.forEach(r => { const i = bk.findIndex(b => r.ts >= b.from && r.ts < b.to); if (i >= 0) { agg[i][r.s]++; agg[i].n++; } });
+  const peak = Math.max(1, ...agg.map(a => a.n)), step = share ? 25 : niceStep(peak / 3), top = share ? 100 : Math.ceil(peak / step) * step;
+  const ticks = []; for (let v = 0; v <= top + 1e-9; v += step) ticks.push(v);
+  const cols = h('div', { class: 'tcols', style: '--nc:' + bk.length }), xs = h('div', { class: 'xlab', style: '--nc:' + bk.length + (mini ? ';min-width:0;margin-left:36px' : '') });
+  bk.forEach((b, i) => {
+    xs.append(h('span', null, b.show === false ? '' : b.label));
+    const a = agg[i]; if (!a.n) { cols.append(h('span', { class: 'tcol empty' })); return; }
+    const den = share ? a.n : top, t = b.full + ': ' + fmt(a.n) + ' · ' + SENT_ORDER.map(x => a[x] + ' ' + nm[x] + ' (' + pct(a[x], a.n) + ')').join(' · ');
+    const c = h('div', { class: 'tcol', role: 'img', 'aria-label': t }, ['Negative', 'Neutral', 'Positive'].map(x => a[x] ? h('i', { style: 'height:' + (a[x] / den * 100) + '%;background:' + SENT_COLOR[x] }) : null));
+    tipOn(c, t); cols.append(c);
+  });
+  const plot = h('div', { class: 'plot', style: mini ? 'min-width:0;height:130px;margin-left:36px' : null }, ticks.map(v => h('span', { class: 'gl', style: 'bottom:' + (v / top * 100) + '%' }, h('em', null, share ? v + '%' : fmt(v)))), cols);
+  return [plot, xs];
+}
+const dRows = key => DSRC[key].rows.filter(r => key !== 'cit' || DASH.biz === 'All' || r.biz === DASH.biz);
+const legendFor = nm => h('div', { class: 'legend' }, SENT_ORDER.map(x => h('span', null, h('i', { class: 'dot', style: 'background:' + SENT_COLOR[x] }), nm[x])));
+const dpick = (label, opts, get, set) => {
+  const d = ddField({ label, single: true, allLabel: opts.find(o => o[0] === get())[1], options: opts.map(([key, l]) => ({ key, label: l })), toggle: k => { set(k); sync(); } });
+  function sync() { opts.forEach(([k]) => { d.items.get(k).cb.checked = k === get(); }); d.setValue(opts.find(o => o[0] === get())[1], false); }
+  sync(); return d;
+};
+
+function trendCard() {
+  const holder = h('div', { class: 'trendbody' }), note = h('div', { class: 'note' }), head = h('div');
+  const srcDD = dpick('Source', [['cit', 'Citations'], ['ser', 'Search results']], () => DASH.src, k => { DASH.src = k; draw(); });
+  const perDD = dpick('Period', DPER, () => DASH.per, k => { DASH.per = k; draw(); });
+  const seg = h('span', { class: 'seg' }, [['count', 'Count'], ['share', 'Share']].map(([k, l]) => h('button', { 'aria-pressed': 'false', onclick: () => { DASH.mode = k; draw(); } }, l)));
+  const leg = h('span');
+  function draw() {
+    const src = DSRC[DASH.src], rows = dRows(DASH.src), bk = dBuckets(DASH.per), nm = DNAMES[DASH.src], inR = rows.filter(r => r.ts < bk[bk.length - 1].to && r.ts >= bk[0].from);
+    head.replaceChildren(h('h2', null, 'Sentiment by date'), h('div', { class: 'sub' }, src.how + ' Each bar is ' + (DASH.per === 'all' ? 'a month' : 'a day') + ', stacked by sentiment.'));
+    [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(['count', 'share'][i] === DASH.mode)));
+    leg.replaceChildren(legendFor(nm));
+    if (!inR.length) holder.replaceChildren(h('div', { class: 'note' }, 'No dated ' + src.noun + ' in this period.'));
+    else holder.replaceChildren(...trendPlot(bk, inR, DASH.mode === 'share', nm, false));
+    const bizNote = DASH.src === 'cit' && DASH.biz !== 'All' ? ' Showing ' + DASH.biz + '.' : DASH.src === 'cit' ? ' Adani Ports citations have no Published date.' : '';
+    note.textContent = fmt(inR.length) + ' dated ' + src.noun + ' in this period, of ' + fmt(rows.length) + ' with a date. Latest date in the data is ' + dFull(AS_OF) + '.' + bizNote;
+  }
+  const el = h('section', { class: 'card chart wide dtrend' }, head, h('div', { class: 'trendbar' }, h('div', { class: 'frow', style: 'gap:10px' }, srcDD.btn, perDD.btn), h('div', { class: 'frow', style: 'gap:14px' }, leg, seg)), holder, note);
+  draw(); return el;
+}
+
+function weekCard(key) {
+  const src = DSRC[key], rows = dRows(key), nm = DNAMES[key];
+  const cur = rows.filter(r => r.ts >= AS_OF - 6 * DAY && r.ts <= AS_OF), prev = rows.filter(r => r.ts >= AS_OF - 13 * DAY && r.ts <= AS_OF - 7 * DAY);
+  const a = tally(cur), b = tally(prev), net = x => P100(x.Positive, x.n) - P100(x.Negative, x.n);
+  const span = dShort(AS_OF - 6 * DAY) + ' to ' + dFull(AS_OF), pspan = dShort(AS_OF - 13 * DAY) + ' to ' + dShort(AS_OF - 7 * DAY);
+  const el = h('section', { class: 'card chart dweek' }, h('div', null, h('h2', null, 'Last 7 days · ' + src.label), h('div', { class: 'sub' }, span + '. ' + src.how)));
+  if (!a.n) { el.append(h('div', { class: 'note' }, 'No dated ' + src.noun + ' in these 7 days' + (key === 'cit' && DASH.biz !== 'All' ? ' for ' + DASH.biz : '') + '.')); return el; }
+  const dn = net(a) - net(b), dtag = !b.n ? null : h('span', { class: 'tag ' + (dn > 0 ? 'sp' : dn < 0 ? 'sn' : 'su') }, (dn > 0 ? '▲ +' : dn < 0 ? '▼ ' : '▶ ') + dn + ' pts vs previous 7 days');
+  el.append(
+    h('div', { class: 'wkhead' }, h('div', { class: 'wknet' }, h('b', null, (net(a) > 0 ? '+' : '') + net(a)), h('span', null, 'Net sentiment')), dtag),
+    h('div', { class: 'wkgrid' }, SENT_ORDER.map(x => h('div', { class: 'wkc' }, h('span', { class: 'wkl' }, h('i', { class: 'dot', style: 'background:' + SENT_COLOR[x] }), nm[x]), h('b', null, fmt(a[x])), h('small', null, pct(a[x], a.n))))),
+    h('div', { class: 'sbar', role: 'img', 'aria-label': SENT_ORDER.map(x => nm[x] + ' ' + pct(a[x], a.n)).join(', ') }, SENT_ORDER.map(x => a[x] ? h('i', { style: 'width:' + a[x] / a.n * 100 + '%;background:' + SENT_COLOR[x] }) : null)),
+    h('div', { class: 'trendbody' }, ...trendPlot(dBuckets('7'), cur, false, nm, true)),
+    h('div', { class: 'note' }, fmt(a.n) + ' ' + src.noun + ' in the last 7 days. ' + (b.n ? 'Previous 7 days (' + pspan + '): ' + fmt(b.n) + ', net sentiment ' + (net(b) > 0 ? '+' : '') + net(b) + '.' : 'No dated ' + src.noun + ' in the 7 days before.') + ' Net sentiment is Positive % minus Negative %.'));
+  return el;
+}
+
+/* percent ledger: bars scaled 0 to 100 */
+function pctChart(title, sub, items, opt) {
+  opt = opt || {};
+  const el = h('section', { class: 'card chart' }, h('div', null, h('h2', null, title), h('div', { class: 'sub' }, sub)));
+  if (!items.length) { el.append(h('div', { class: 'note' }, 'Nothing to chart for this selection.')); return el; }
+  const tipT = it => it.label + ': ' + it.value + '%' + (it.note ? ' (' + it.note + ')' : '');
+  el.append(h('div', { class: 'ledger' }, items.map((it, i) => { const r = h('div', { class: 'lrow' }, h('span', { class: 'rk' }, String(i + 1).padStart(2, '0')),
+    h('span', { class: 'lm' }, h('span', { class: 'lt', title: it.label }, it.label), h('span', { class: 'ltr' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, it.value)) + '%' + (it.color ? ';background:' + it.color : '') }))),
+    h('span', { class: 'lv' }, it.value + '%', it.note ? h('small', null, it.note) : null)); tipOn(r, tipT(it)); return r; })));
+  return el;
+}
+const dchart = (spec, items) => { const el = h('section', { class: 'card chart' }); drawChart(el, spec, items, null, null); return el; };
+const naTile = (label, why) => h('div', { class: 'card stat na' }, h('div', { class: 'sh' }, h('span', { class: 'l' }, label), h('span', { class: 'tag t6' }, 'Not in the data')), h('div', { class: 's' }, why));
+const dtile = (x) => statTile(x, 1, 'dash' + (++dashN));
+function dsec(letter, title, metrics, kids) {
+  return h('section', { class: 'dsec', 'data-k': letter }, h('div', { class: 'dhead' }, h('span', { class: 'dlet' }, letter), h('div', null, h('h2', null, title),
+    h('div', { class: 'dchips' }, metrics.map(([t, on]) => h('span', { class: 'dchip' + (on ? '' : ' off'), title: on ? 'Measured on this page' : 'Not measurable from the data yet' }, t))))), ...kids);
+}
+
+function buildDash() {
+  const root = h('div', { class: 'dash' }), body = h('div', { class: 'dash' });
+  const bizDD = dpick('Business', [['All', 'All Businesses'], ...BIZ.map(b => [b, b])], () => DASH.biz, k => { DASH.biz = k; renderBody(); });
+  BIZ.forEach(b => { bizDD.items.get(b).n.textContent = fmt(CI.filter(r => r.biz === b).length); }); bizDD.items.get('All').n.textContent = fmt(CI.length);
+  root.append(h('section', { class: 'card pad dscope' }, bizDD.btn, h('div', { class: 'note' }, 'Data as of ' + dFull(AS_OF) + ' (latest report ' + REPORTS[REPORTS.length - 1] + '). Business applies to Prompt List data: prompts, citations and sources. Keyword Analysis and Brand Mention are not split by Business, so they always show everything.')), body);
+
+  function renderBody() {
+    const S = DASH.biz, inS = r => S === 'All' || r.biz === S;
+    const prs = PR.filter(inS), cis = CI.filter(inS);
+    const nP = prs.length, nC = cis.length;
+    const covP = prs.filter(p => p.cov > 0).length, avgCov = nP ? Math.round(prs.reduce((a, p) => a + (p.cov || 0), 0) / nP) : 0;
+    const yes = cis.filter(r => r.yes === 'Yes').length;
+    const fav = prs.reduce((a, p) => a + p.fav, 0), neu = prs.reduce((a, p) => a + p.neu, 0), unf = prs.reduce((a, p) => a + p.unf, 0), nR = fav + neu + unf;
+    const own = cis.filter(r => r.of === 'Brand').length, comp = cis.filter(r => r.of && r.of !== 'Brand').length, third = cis.filter(r => !r.of).length;
+    const doms = countVals(cis, r => r.dom), top10 = doms.slice(0, 10).reduce((a, b) => a + b[1], 0), nDom = cis.filter(r => r.dom).length;
+    const tiles = (arr) => h('div', { class: 'grid-stats' }, arr);
+
+    /* A. AI Visibility */
+    const provs = CD.prov.map(p => { const rr = cis.filter(r => r.prov === p), y = rr.filter(r => r.yes === 'Yes').length; return { label: p, value: P100(y, rr.length), note: fmt(y) + ' of ' + fmt(rr.length), n: rr.length }; }).filter(x => x.n).sort((a, b) => b.value - a.value);
+    const bands = [['0%', v => v === 0], ['1 to 25%', v => v > 0 && v <= 25], ['26 to 50%', v => v > 25 && v <= 50], ['51 to 75%', v => v > 50 && v <= 75], ['76 to 100%', v => v > 75]];
+    const low = [...prs].sort((a, b) => a.cov - b.cov).slice(0, 8).map(p => ({ label: (S === 'All' ? p.biz.replace('Adani ', '') + ' · ' : '') + '#' + p.n + ' ' + shortP(p.prompt, 52), value: p.cov, note: '' }));
+    const A = dsec('A', 'AI Visibility', [['% of tracked queries where Adani is mentioned', 1], ['Platform-wise visibility', 1]], [
+      tiles([
+        { l: 'Tracked prompts where Adani is mentioned', n: P100(covP, nP), unit: '%', s: fmt(covP) + ' of ' + fmt(nP) + ' prompts have a Brand coverage % above 0. Line shows Brand coverage % per prompt', spark: { v: prs.map(p => p.cov || 0), l: prs.map(prLabel) } },
+        { l: 'Average Brand coverage', n: avgCov, unit: '%', s: 'Share of answers that mention the Brand, averaged over ' + fmt(nP) + ' prompts. Line shows each Provider', spark: { v: provs.map(x => x.value), l: provs.map(x => x.label) } },
+        { l: 'Citations from answers that name Adani', n: P100(yes, nC), unit: '%', s: fmt(yes) + ' of ' + fmt(nC) + ' citations have Brand mentioned = Yes' }].map(dtile)),
+      h('div', { class: 'charts' },
+        pctChart('Platform-wise visibility', 'Share of each Provider’s citations where the answer mentions the Brand (Brand mentioned = Yes).', provs),
+        dchart({ title: 'Brand coverage across prompts', kind: 'columns', sub: 'Prompts grouped by Brand coverage %.' }, bands.map(([k, f]) => ({ key: k, label: k, value: prs.filter(p => f(p.cov || 0)).length }))),
+        pctChart('Lowest Brand coverage', 'The 8 prompts where the Brand shows up least. Bars show Brand coverage %.', low))]);
+
+    /* B. Narrative */
+    const serN = SERP.filter(r => r.sent === 'Negative' && r.dom && r.dom !== 'www.google.com').map(r => r.dom), brN = BR.filter(r => r.sent === 'Negative' && r.domain).map(r => r.domain);
+    const bizUnf = BIZ.map(b => { const q = PR.filter(p => p.biz === b), f = q.reduce((a, p) => a + p.fav, 0), n_ = q.reduce((a, p) => a + p.neu, 0), u = q.reduce((a, p) => a + p.unf, 0); return { label: b, value: P100(u, f + n_ + u), note: fmt(u) + ' of ' + fmt(f + n_ + u) + ' answers', color: 'var(--s-neg)' }; });
+    const B = dsec('B', 'Narrative', [['Positive / neutral / negative response classification', 1], ['Negative narrative prevalence', 1], ['Balanced-context score', 0], ['Presence of desired factual narratives', 0]], [
+      tiles([
+        { l: 'Favourable responses', n: P100(fav, nR), unit: '%', s: fmt(fav) + ' of ' + fmt(nR) + ' classified answers' },
+        { l: 'Neutral responses', n: P100(neu, nR), unit: '%', s: fmt(neu) + ' of ' + fmt(nR) + ' classified answers' },
+        { l: 'Negative narrative prevalence', n: P100(unf, nR), unit: '%', s: fmt(unf) + ' Unfavourable answers of ' + fmt(nR) },
+        { l: 'Net sentiment of responses', n: P100(fav, nR) - P100(unf, nR), unit: 'pts', s: 'Favourable % minus Unfavourable %. Above 0 leans favourable' }].map(dtile)
+        .concat([naTile('Presence of desired factual narratives', 'Needs the list of facts Adani wants to see in answers. Nothing in the data marks them.'), naTile('Balanced-context score', 'No scoring rule in the data. Use the Favourable, Neutral and Unfavourable split above.')])),
+      h('div', { class: 'charts' },
+        dchart({ title: 'Response classification', kind: 'dial', unit: 'answers', pctOfTotal: true, sub: 'Favourable, Neutral and Unfavourable answers across the prompts shown.' }, [['Favourable', fav], ['Neutral', neu], ['Unfavourable', unf]].map(([k, v]) => ({ key: k, label: k, value: v, color: SENT_COLOR[k] }))),
+        dchart({ title: 'Search result sentiment', kind: 'dial', unit: 'results', pctOfTotal: true, sub: 'All Keyword Analysis results. Not split by Business.' }, SENTS.map(x => ({ key: x, label: x, value: SERP.filter(r => r.sent === x).length, color: SENT_COLOR[x] }))),
+        dchart({ title: 'Brand Mention sentiment', kind: 'dial', unit: 'mentions', pctOfTotal: true, sub: 'All Brand Mention entries. Not split by Business.' }, SENTS.map(x => ({ key: x, label: x, value: BR.filter(r => r.sent === x).length, color: SENT_COLOR[x] }))),
+        pctChart('Negative narrative by Business', 'Unfavourable share of each Business’s answers. All four Businesses are shown.', bizUnf),
+        dchart({ title: 'Where negative results come from', sub: 'Domains with the most Negative search results and Brand Mentions. google.com left out.' }, countVals([...serN, ...brN], x => x).slice(0, 8).map(([k, v]) => ({ key: k, label: k, value: v })))) ]);
+
+    /* C. Source */
+    const wts = countVals(cis.filter(r => !r.of && r.wt), r => r.wt).slice(0, 8);
+    const ofs = countVals(cis.filter(r => r.of), r => r.of);
+    const C = dsec('C', 'Source', [['Sources cited by LLMs', 1], ['Adani-owned source citations', 1], ['Credible third-party source citations', 0], ['Source diversity and quality', 1]], [
+      tiles([
+        { l: 'Sources cited by LLMs', n: doms.length, unit: 'domains', s: fmt(nC) + ' citations in all. Line shows the 16 most cited', spark: { v: doms.slice(0, 16).map(x => x[1]), l: doms.slice(0, 16).map(x => x[0]) } },
+        { l: 'Adani-owned source citations', n: P100(own, nC), unit: '%', s: fmt(own) + ' citations point to Adani’s own pages (Cited page of = Brand)' },
+        { l: 'Third-party source citations', n: P100(third, nC), unit: '%', s: fmt(third) + ' citations on pages that are neither Adani’s nor a tracked competitor’s' },
+        { l: 'Competitor source citations', n: comp, unit: 'citations', s: P100(comp, nC) + '% of citations point to a tracked competitor’s pages' },
+        { l: 'Source diversity', n: P100(top10, nDom), unit: '%', s: 'Share of citations that come from the 10 most cited domains. Lower means more spread out' }].map(dtile)
+        .concat([naTile('Credible third-party citations', 'Needs a list of domains counted as credible. Website type is shown below instead.')])),
+      h('div', { class: 'charts' },
+        dchart({ title: 'Cited page of', sub: 'Whose page was cited: the Brand or a tracked competitor.' }, ofs.map(([k, v]) => ({ key: k, label: k, value: v }))),
+        dchart({ title: 'Third-party citations by Website type', sub: 'Top 8 types on pages that are not Adani’s or a tracked competitor’s.' }, wts.map(([k, v]) => ({ key: k, label: k, value: v }))),
+        dchart({ title: 'Most cited domains', sub: 'Top 10 domains by number of citations.' }, doms.slice(0, 10).map(([k, v]) => ({ key: k, label: k, value: v })))) ]);
+
+    /* D. BU Discovery */
+    const bm = prs.reduce((a, p) => a + (p.bm || 0), 0);
+    const rowFor = b => { const q = PR.filter(p => p.biz === b), c = CI.filter(r => r.biz === b), f = q.reduce((a, p) => a + p.fav, 0), n_ = q.reduce((a, p) => a + p.neu, 0), u = q.reduce((a, p) => a + p.unf, 0), tot = f + n_ + u;
+      return { b, np: q.length, cov: q.length ? Math.round(q.reduce((a, p) => a + (p.cov || 0), 0) / q.length) : 0, wb: q.filter(p => p.cov > 0).length, bm: q.some(p => p.bm != null) ? q.reduce((a, p) => a + (p.bm || 0), 0) : null, fav: P100(f, tot), unf: P100(u, tot), nc: c.length, own: P100(c.filter(r => r.of === 'Brand').length, c.length), comp: c.filter(r => r.of && r.of !== 'Brand').length }; };
+    const rowsBU = BIZ.map(rowFor);
+    const th = ['Business', 'Prompts', 'Brand coverage', 'Prompts with the Brand', 'Brand mentions', 'Favourable', 'Unfavourable', 'Citations', 'Own-site citations', 'Competitor citations'];
+    const tbl = h('section', { class: 'card pad' }, h('h2', null, 'Business comparison'), h('div', { class: 'sub' }, 'Every Business side by side' + (S !== 'All' ? '. ' + S + ' is highlighted' : '') + '. Brand mentions are not reported for Adani Ports.'),
+      h('div', { class: 'tscroll', style: 'margin-top:10px' }, h('table', { class: 'dtab' }, h('thead', null, h('tr', null, th.map((t, i) => h('th', { class: i ? 'num' : '' }, t)))),
+        h('tbody', null, rowsBU.map(r => h('tr', { class: r.b === S ? 'hl' : '' }, h('td', { class: 'strong' }, r.b), h('td', { class: 'num' }, fmt(r.np)), h('td', { class: 'num' }, r.cov + '%'), h('td', { class: 'num' }, fmt(r.wb) + ' of ' + fmt(r.np)), h('td', { class: 'num' }, r.bm == null ? '—' : fmt(r.bm)), h('td', { class: 'num' }, r.fav + '%'), h('td', { class: 'num' }, r.unf + '%'), h('td', { class: 'num' }, fmt(r.nc)), h('td', { class: 'num' }, r.own + '%'), h('td', { class: 'num' }, fmt(r.comp))))))));
+    const D = dsec('D', 'BU Discovery', [['BU mentions', 1], ['Category / query visibility', 1], ['Recommendation / discovery appearances', 1], ['Competitor visibility comparison', 1]], [
+      tiles([
+        { l: 'BU mentions', n: bm, unit: 'mentions', s: 'Brand mentions across the prompts shown. Line shows each Business', spark: { v: rowsBU.map(r => r.bm || 0), l: BIZ } },
+        { l: 'Discovery appearances', n: covP, unit: 'prompts', s: 'Prompts where the answer brings up the Brand, of ' + fmt(nP) + '. Line shows each Business', spark: { v: rowsBU.map(r => r.wb), l: BIZ } },
+        { l: 'Competitor visibility', n: comp, unit: 'citations', s: 'Citations on tracked competitors’ pages, against ' + fmt(own) + ' on Adani’s own' }].map(dtile)),
+      tbl,
+      h('div', { class: 'charts' },
+        dchart({ title: 'Competitor visibility comparison', sub: 'Citations on each tracked competitor’s pages. Adani Ports and Adani Connex only.' }, ofs.filter(x => x[0] !== 'Brand').map(([k, v]) => ({ key: k, label: k, value: v }))),
+        dchart({ title: 'Category visibility', sub: 'Brand Mention entries by Category, top 8. Not split by Business.' }, countVals(BR, r => r.cat).slice(0, 8).map(([k, v]) => ({ key: k, label: k, value: v }))),
+        dchart({ title: 'Query visibility', sub: 'Tracked queries with the most monthly searches, top 8.' }, [...KW].sort((a, b) => b.volume - a.volume).slice(0, 8).map(k => ({ key: k.keyword, label: k.keyword, value: k.volume })))) ]);
+
+    const G = h('section', { class: 'card pad dsec', 'data-k': 'R' }, h('div', { class: 'dhead' }, h('span', { class: 'dlet' }, 'R'), h('div', null, h('h2', null, 'Reporting & Governance'),
+      h('div', { class: 'sub' }, 'Monthly GEO dashboard, monthly and quarterly review.'))),
+      h('ul', { class: 'gov' },
+        h('li', null, 'Reporting period: data as of ' + dFull(AS_OF) + '. Prompt List reports are from ' + REPORTS.join(', ') + '.'),
+        h('li', null, 'Dated trends use each citation’s Published date and each search result’s date. They show when the content was published, not when an AI platform gave the answer.'),
+        h('li', null, 'Not in the data yet: the list of desired factual narratives, a Balanced-context scoring rule, and a list of credible third-party domains.')));
+    body.replaceChildren(
+      h('section', { class: 'dsec', 'data-k': 'T' }, h('div', { class: 'dhead' }, h('span', { class: 'dlet' }, '◷'), h('div', null, h('h2', null, 'Over time'), h('div', { class: 'sub' }, 'Sentiment by date, and the last 7 days against the 7 before.'))),
+        trendCard(), h('div', { class: 'charts' }, weekCard('cit'), weekCard('ser'))),
+      A, B, C, D, G);
+  }
+  renderBody();
+  return root;
+}
+VIEWS.dash = { custom: true, label: 'Dashboard', title: 'Dashboard', sub: 'AI Visibility, Narrative, Source and BU Discovery, with sentiment over time and the last 7 days.', build: buildDash };
+
 /* ---------- overview ---------- */
 const nonEmpty = (rows, g) => rows.filter(r => has(g(r))).length;
 const distinct = (rows, g) => new Set(rows.map(g).filter(has)).size;
@@ -1888,9 +2119,9 @@ function buildOverview() {
 const ICON_FOR = { keywords: 'key', prompts: 'chat', cites: 'link', sources: 'tag', pages: 'ext', serp: 'search', brand: 'at' };
 
 /* ---------- shell ---------- */
-const NAV = [['overview', 'Overview', 'grid'], ['prompts', 'Prompt List', 'chat'], ['serp', 'Keyword Analysis', 'search'], ['brand', 'Brand Mention', 'at'], ['research', 'Research', 'key']];
+const NAV = [['overview', 'Overview', 'grid'], ['dash', 'Dashboard', 'chart'], ['prompts', 'Prompt List', 'chat'], ['serp', 'Keyword Analysis', 'search'], ['brand', 'Brand Mention', 'at'], ['research', 'Research', 'key']];
 const nav = document.getElementById('nav'), viewsEl = document.getElementById('views'), jumpEl = document.getElementById('jump'), gs = document.getElementById('gsearch'), resetBtn = document.getElementById('resetAll');
-const counts = { overview: '', keywords: KW.length, prompts: PR.length, serp: SERP.length, brand: BR.length, research: RES.n.kw };
+const counts = { overview: '', dash: '', keywords: KW.length, prompts: PR.length, serp: SERP.length, brand: BR.length, research: RES.n.kw };
 const ind = h('i', { class: 'ind', 'aria-hidden': 'true' }); nav.append(ind);
 NAV.forEach(([id, label]) => nav.append(h('button', { 'data-id': id, onclick: () => show(GROUPS[id] ? lastSub[id] : id) }, label, h('span', { class: 'n' }, counts[id] === '' ? '' : fmt(counts[id])))));
 resetBtn.append(icon('reset'));
@@ -1927,7 +2158,7 @@ function syncJump() {
   [...jumpEl.querySelectorAll('button:not(.circle)')].forEach((b, i) => b.classList.toggle('on', i === cur));
 }
 function buildJump(el, id) {
-  const marks = id === 'overview' ? [['.grid-stats', 'Summary'], ['.sheets', 'Tabs'], ['.charts', 'Charts'], ['.dict', 'Columns']] : [['.grid-stats', 'Summary'], ['.charts', 'Charts'], ['.cross', 'Domains'], ['.filters', 'Filters'], ['.tcard', 'Table']];
+  const marks = id === 'dash' ? [['[data-k="T"]', 'Over time'], ['[data-k="A"]', 'AI Visibility'], ['[data-k="B"]', 'Narrative'], ['[data-k="C"]', 'Source'], ['[data-k="D"]', 'BU Discovery'], ['[data-k="R"]', 'Reporting']] : id === 'overview' ? [['.grid-stats', 'Summary'], ['.sheets', 'Tabs'], ['.charts', 'Charts'], ['.dict', 'Columns']] : [['.grid-stats', 'Summary'], ['.charts', 'Charts'], ['.cross', 'Domains'], ['.filters', 'Filters'], ['.tcard', 'Table']];
   const items = marks.map(([q, label]) => [el.querySelector(q), label]).filter(x => x[0]).sort((a, b) => (a[0].compareDocumentPosition(b[0]) & 4) ? -1 : 1);
   items.forEach(([n]) => n.setAttribute('data-jump', ''));
   jumpEl._items = items;

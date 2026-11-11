@@ -5,6 +5,13 @@ A single-page dashboard for exploring search visibility data for the Adani brand
 ## Tabs
 
 - **Overview**: summary cards, charts and a column dictionary for every table.
+- **Dashboard**: the metrics framework in four sections, plus sentiment over time.
+  - **Over time**: a stacked sentiment-by-date graph (citations or search results; last 7, 30, 90 days or 24 months) and Last 7 days cards with net sentiment against the previous 7 days.
+  - **A. AI Visibility**: prompts where Adani is mentioned, average Brand coverage and visibility by AI platform.
+  - **B. Narrative**: Favourable, Neutral and Unfavourable classification, negative narrative prevalence and net sentiment.
+  - **C. Source**: sources cited, Adani-owned, third-party and competitor citations, and source diversity.
+  - **D. BU Discovery**: a Business comparison, competitor visibility, category and query visibility.
+  - A Business dropdown applies to Prompt List data. Keyword Analysis and Brand Mention always show everything.
 - **Prompt List**: prompts for four Businesses (Adani Airports, Adani Energy Solutions, Adani Ports and Adani Connex), in four sub-tabs.
   - **Prompts**: 119 prompts with Brand coverage %, Brand sentiment (avg), Favourable, Neutral and Unfavourable counts, and Brand mentions and Total mentions (Scored answers for Adani Ports).
   - **Citations**: 9,748 citations with Provider, Brand mentioned, Brand sentiment, Sentiment score, Citation URL, Published, Domain, Website type and Cited page of.
@@ -36,4 +43,5 @@ A single-page dashboard for exploring search visibility data for the Adani brand
 - **Website type** labels can differ between the Citations and Sources exports for the same domain. Each table keeps its own labels.
 - **Dates.** Only 1,466 of the 9,129 Keyword Analysis results carry a date. Relative dates such as "2 months ago" are placed using late October 2026.
 - **Research** data is stored compressed inside the page and unpacked the first time each sub-tab is opened (about a second). About 1,050 RAW Backlinks rows have cells shifted by one column and some text is garbled in the original; both are shown as exported. Dates display as YYYY-MM-DD. Intent and SERP Type filters merge capitalisation variants; tables show the raw values. The empty "Keywords" block is noted under Prompts Matrix.
+- **Dashboard dates** are citation Published dates and search result dates, so they show when content was published, not when an AI platform answered. "Last 7 days" is 20 to 26 Oct 2026, the newest date in the data. Adani Ports citations have no dates. The desired factual narratives, Balanced-context score and credible third-party list are not in the data, so they are shown as not available.
 - Fonts load from Google Fonts. Everything else is self-contained.
