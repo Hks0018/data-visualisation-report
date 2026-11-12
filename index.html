@@ -727,6 +727,10 @@ tbody tr.tot .note{font-weight:400}
 .bm .orgtop::after{content:'';position:absolute;left:50%;bottom:-18px;height:18px;border-left:2px solid var(--line)}
 .bm .orgrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;border-top:2px solid var(--line);margin-top:18px;padding-top:16px}
 .bm .orgteam{padding:14px 16px;display:flex;flex-direction:column;gap:6px}.bm .orgteam h3{margin:0;font:600 15px var(--font-head)}.bm .orgteam ul{margin:2px 0 0;padding-left:16px;font-size:12.5px;color:var(--fg-2);display:flex;flex-direction:column;gap:3px}.bm .orgstat{font-size:12.5px;color:var(--fg-2)}.bm .orgstat b{color:var(--fg)}
+
+.bm .hb.wl .hbr{grid-template-columns:minmax(120px,42%) minmax(0,1fr) auto;align-items:center}.bm .hb.wl .hbl{white-space:normal;overflow:visible}.bm .hb.wl .hbl small{white-space:normal;line-height:1.3}.bm .hb.wl .hbtx{white-space:normal;-webkit-line-clamp:3}
+.bm .capcall{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.5;color:var(--fg-2)}.bm .capcall b{font:600 17px var(--font-head);color:var(--fg)}.bm .capcall.neg{background:rgba(180,22,22,.08)}.bm .capcall.neg b{color:#B41616}
+.bm .charts>.card{min-width:0;overflow-wrap:anywhere}
 </style>
 
 </head>
@@ -3143,13 +3147,14 @@ function buildMaster() {
     { l: 'SEO, ranking and analytics tools', basis: 'Fixed, a month', units: () => 1, unit: 150000 },
     { l: 'Social scheduling and listening tools', basis: 'Fixed, a month', units: () => 1, unit: 40000 },
     { l: 'Outreach and PR database tools', basis: 'Fixed, a month', units: () => 1, unit: 60000 },
-    { l: 'Press-release wire distribution', basis: 'A paid wire for 1 in 4 SEO news posts', units: () => ct.news / 4, unit: 25000, type: 'News stories and press notes' },
-    { l: 'Video production (shoots, voice, music)', basis: 'Each video', units: () => tot('Videos'), unit: 15000, type: 'Videos' },
+    { l: 'News stories and press notes (paid placement, wire)', basis: 'Each story, third party charges', units: () => tot('News stories and press notes'), unit: 35000, type: 'News stories and press notes' },
+    { l: 'Video production (shoots, voice, music)', basis: 'Each video, third party charges', units: () => tot('Videos'), unit: 15000, type: 'Videos' },
     { l: 'Design assets and stock', basis: 'Each infographic or deck', units: () => tot('Infographics and data visuals') + tot('Slide decks'), unit: 3000, type: 'Infographics and data visuals' },
     { l: 'Tool and calculator hosting and testing', basis: 'Each tool', units: () => tot('Tools and calculators'), unit: 20000, type: 'Tools and calculators' },
+    { l: 'Expert articles (paid contributor and publication fees)', basis: 'Each article, third party charges', units: () => tot('Expert articles'), unit: 35000, type: 'Expert articles' },
     { l: 'Research data and surveys', basis: 'Each data study', units: () => ct.studies, unit: 50000, type: 'Reports, PDFs and research' },
     { l: 'Award and ranking entry fees', basis: 'Each entry', units: () => tot('Award and ranking entries'), unit: 25000, type: 'Award and ranking entries' },
-    { l: 'Event and webinar costs (paid slots, travel)', basis: '1 in 3 appearances', units: () => tot('Podcast, webinar and event appearances') / 3, unit: 150000, type: 'Podcast, webinar and event appearances' },
+    { l: 'Podcast, webinar and event appearances (paid slots, travel)', basis: 'Each appearance, third party charges', units: () => tot('Podcast, webinar and event appearances'), unit: 60000, type: 'Podcast, webinar and event appearances' },
     { l: 'Paid directory and listing fees', basis: '1 in 5 submissions', units: () => tot('Listing and profile submissions') / 5, unit: 2000, type: 'Listing and profile submissions' }];
   let paintF = () => {};
   const calcTeam = () => {
@@ -3214,8 +3219,11 @@ function buildMaster() {
 
   /* ---- C. content by type ---- */
   const per = (v, d) => sm(v / d);
-  const matrix = TYPES.map(t => [t, M[t].me ? rd(M[t].me) : '–', M[t].pr ? rd(M[t].pr) : '–', M[t].se ? sm(M[t].se) : '–', h('b', null, rd(tot(t))), per(tot(t), 4.33), per(tot(t), 21), rd(yr(t))]);
-  matrix.push({ hl: true, c: ['All content (without outreach)', rd(PIECES.reduce((a, t) => a + M[t].me, 0)), rd(PIECES.reduce((a, t) => a + M[t].pr, 0)), rd(PIECES.reduce((a, t) => a + M[t].se, 0)), rd(pieces), per(pieces, 4.33), per(pieces, 21), rd(yearAll)] });
+  const tpEl = {}, tpAll = h('b'), tpOf = t => DC.filter(d => d.type === t && /third party/.test(d.basis)).reduce((a, d) => a + d.units() * d.unit, 0);
+  const paintTP = () => { let sum = 0; TYPES.forEach(t => { const v = tpOf(t); sum += v; tpEl[t].textContent = v > 0 ? inr(v) : '–'; }); tpAll.textContent = inr(sum); };
+  const matrix = TYPES.map(t => [t, M[t].me ? rd(M[t].me) : '–', M[t].pr ? rd(M[t].pr) : '–', M[t].se ? sm(M[t].se) : '–', h('b', null, rd(tot(t))), per(tot(t), 4.33), per(tot(t), 21), rd(yr(t)), (tpEl[t] = h('span'))]);
+  matrix.push({ hl: true, c: ['All content (without outreach)', rd(PIECES.reduce((a, t) => a + M[t].me, 0)), rd(PIECES.reduce((a, t) => a + M[t].pr, 0)), rd(PIECES.reduce((a, t) => a + M[t].se, 0)), rd(pieces), per(pieces, 4.33), per(pieces, 21), rd(yearAll), tpAll] });
+  paintTP();
   const share = [['me', PIECES.reduce((a, t) => a + M[t].me, 0)], ['pr', PIECES.reduce((a, t) => a + M[t].pr, 0)], ['se', PIECES.reduce((a, t) => a + M[t].se, 0)]];
   const rowsNS = PIECES.filter(t => t !== 'Social posts' && tot(t) > 0).sort((a, b) => tot(b) - tot(a)), maxNS = Math.max(1, ...rowsNS.map(tot));
   const stackRows = h('div', { class: 'srows' }, rowsNS.map(t => { const r = h('div', { class: 'srow' }, h('span', { class: 'sl' }, t), h('div', { class: 'strack' }, h('div', { class: 'sfill', style: 'width:' + tot(t) / maxNS * 100 + '%' }, ['me', 'pr', 'se'].filter(k => M[t][k] > 0).map(k => { const i = h('i', { style: 'flex:' + M[t][k] + ' 1 0;background:' + COL[k] }); tipOn(i, NAME[k] + ': ' + rd(M[t][k]) + ' ' + t.toLowerCase() + ' a month'); return i; }))), h('span', { class: 'sv' }, rd(tot(t)))); return r; }));
@@ -3224,7 +3232,7 @@ function buildMaster() {
     h('div', { class: 'c2' },
       card('Share of the content, by plan', 'Pieces a month at full pace, without outreach.', stackBar(share.map(([k, v]) => ({ label: NAME[k], v: +(v / pieces * 100).toFixed(1), color: COL[k] })), { note: 'Social posts are ' + s0(social, pieces) + ' of all content, so the chart on the right leaves them out.' })),
       card('Everything except social posts', 'Pieces a month by type, coloured by the plan that makes them. Hover a colour for its number.', legend, stackRows)),
-    tcard('Content by type, plan by plan', 'Pieces a month, and over the 12 months. Where the same piece serves two plans (a data study helps SEO links and AI visibility), the real workload is lower than this total.', dtab(['Content type', 'Mentions', 'Prompts', 'SEO', 'A month', 'A week', 'A working day', '12 months'], matrix, [1, 2, 3, 4, 5, 6, 7]))]);
+    tcard('Content by type, plan by plan', 'Pieces a month, and over the 12 months. Where the same piece serves two plans (a data study helps SEO links and AI visibility), the real workload is lower than this total.', dtab(['Content type', 'Mentions', 'Prompts', 'SEO', 'A month', 'A week', 'A working day', '12 months', 'Third party cost a month'], matrix, [1, 2, 3, 4, 5, 6, 7, 8]))]);
 
   /* ---- D. the 12 months ---- */
   const lineChart = (vals, o) => {
@@ -3271,8 +3279,8 @@ function buildMaster() {
     const byPlan = ['me', 'pr', 'se'].map(k => [k, TYPES.reduce((a, t) => a + M[t][k] * HRS[t], 0)]);
     capWrap.replaceChildren(
       h('div', { class: 'charts' },
-        card('Hours a month, by type', 'Pieces times the time one takes (assumed). Social posts are ' + s0(socialH, H) + ' of all hours.', hbars(rows.slice(0, 9).map(r => ({ label: r.t, v: r.h, text: rd(r.h) + ' h', sub: rd(r.n) + ' a month · ' + HRS[r.t] + ' h each', color: r.t === 'Social posts' ? 'var(--s-neg)' : 'var(--accent)' })), {})),
-        card('People needed, by plan', 'At ' + CAP.hpp + ' working hours a month for each person.', hbars(byPlan.map(([k, hh]) => ({ label: NAME[k], v: hh / CAP.hpp, text: sm(hh / CAP.hpp), sub: rd(hh) + ' hours a month', color: COL[k] })), {}), callout(sm(fte()) + ' people of production work', 'for ' + rd(pieces) + ' pieces and ' + rd(tot('Outreach requests')) + ' outreach requests a month. The team in section F adds leads and reviewers: ' + sm(calcTeam().people) + ' people in all.', fte() > 15 ? 'neg' : '')),
+        card('Hours a month, by type', 'Pieces times the time one takes (assumed). Social posts are ' + s0(socialH, H) + ' of all hours.', hbars(rows.slice(0, 9).map(r => ({ label: r.t, v: r.h, text: rd(r.h) + ' h', sub: rd(r.n) + ' a month · ' + HRS[r.t] + ' h each', color: r.t === 'Social posts' ? 'var(--s-neg)' : 'var(--accent)' })), { cls: 'wl' })),
+        card('People needed, by plan', 'At ' + CAP.hpp + ' working hours a month for each person.', hbars(byPlan.map(([k, hh]) => ({ label: NAME[k], v: hh / CAP.hpp, text: sm(hh / CAP.hpp), sub: rd(hh) + ' hours a month', color: COL[k] })), { cls: 'wl' }), h('div', { class: 'capcall' + (fte() > 15 ? ' neg' : '') }, h('b', null, sm(fte()) + ' people of production work'), h('span', null, 'for ' + rd(pieces) + ' pieces and ' + rd(tot('Outreach requests')) + ' outreach requests a month. The team in section F adds leads and reviewers: ' + sm(calcTeam().people) + ' people in all.'))),
         card('Where quality is at risk', 'What the numbers say.', h('ul', { class: 'gov' },
           h('li', null, 'Social posts are ' + s0(social, pieces) + ' of the content: ' + rd(M['Social posts'].me) + ' a month in the Mentions plan, which is ' + rd(M['Social posts'].me / 21) + ' every working day. At ' + HRS['Social posts'] * 60 + ' minutes each, that is ' + rd(M['Social posts'].me * HRS['Social posts'] / CAP.hpp) + ' people on social posts alone.'),
           h('li', null, 'The largest are ' + [...me.plats].sort((a, b) => (b.pos + b.neu) - (a.pos + a.neu)).slice(0, 2).map(p => p.l + ' (' + fmt(p.pos + p.neu) + ')').join(' and ') + ' a month. Posts at this volume only hold quality with templates, a real person behind each account and spot checks, and some platforms treat repeated brand posts as spam.'),
@@ -3294,7 +3302,7 @@ function buildMaster() {
   const dcRows = DC.map(d => { const e = dcEl[d.l] = { units: h('span'), cost: h('span') }; return [h('b', null, d.l), d.basis, e.units, h('div', { class: 'frow', style: 'gap:6px;justify-content:flex-end' }, h('span', { class: 'note' }, '₹'), FI(d.unit, 500, x => { d.unit = x; }, 90)), e.cost]; });
   dcRows.push({ hl: true, c: ['All direct costs', '', '', '', totEl.dir] });
   paintF = () => {
-    drawA();
+    drawA(); paintTP();
     const T = calcTeam(), planAnn = k => T.year1[k];
     T.rr.forEach(x => { const e = roleEl[x.r.k]; e.hrs.textContent = x.r.fixed ? '–' : rd(x.hrs); e.ppl.textContent = sm(x.ppl); e.cost.textContent = inr(x.cost); });
     T.dc.forEach(x => { const e = dcEl[x.d.l]; e.units.textContent = x.units >= 10 ? rd(x.units) : sm(x.units); e.cost.textContent = inr(x.cost); });
@@ -3315,8 +3323,8 @@ function buildMaster() {
     const tp = ['me', 'pr', 'se'].map(k => [k, T.plan[k]]), tpt = tp.reduce((a, [, v]) => a + v, 0) || 1;
     fCharts.replaceChildren(h('div', { class: 'charts' },
       card('Cost a month, by plan', 'Each role’s cost is shared across the pieces it makes, and the leads, reviewers and fixed tools are shared by hours.', stackBar(tp.map(([k, v]) => ({ label: NAME[k] + ' ' + inr(v), v: +(v / tpt * 100).toFixed(1), color: COL[k] })), { note: 'Total ' + inr(T.total) + ' a month at full pace.' })),
-      card('Cost a month, by team', 'Salaries only.', hbars(Object.keys(TEAMS).map(tm => ({ label: tm, v: T.teamCost[tm], text: inr(T.teamCost[tm]), sub: sm(T.teamPpl[tm]) + ' people', color: 'var(--accent)' })).sort((a, b) => b.v - a.v), {})),
-      card('Where the money goes', 'Salaries against direct costs.', hbars([{ label: 'Salaries', v: T.sal, text: inr(T.sal), color: 'var(--accent)' }, { label: 'Direct costs', v: T.dir, text: inr(T.dir), color: '#F29B38' }], {}), h('div', { class: 'note' }, 'Direct costs are tools, paid wires, video production, awards, events, listings and data.'))));
+      card('Cost a month, by team', 'Salaries only.', hbars(Object.keys(TEAMS).map(tm => ({ label: tm, v: T.teamCost[tm], text: inr(T.teamCost[tm]), sub: sm(T.teamPpl[tm]) + ' people', color: 'var(--accent)' })).sort((a, b) => b.v - a.v), { cls: 'wl' })),
+      card('Where the money goes', 'Salaries against direct costs.', hbars([{ label: 'Salaries', v: T.sal, text: inr(T.sal), color: 'var(--accent)' }, { label: 'Direct costs', v: T.dir, text: inr(T.dir), color: '#F29B38' }], { cls: 'wl' }), h('div', { class: 'note' }, 'Direct costs are tools, paid news placements, expert-article fees, video production, events, awards, listings and data.'))));
     /* cost for each result, in the first year */
     const socC = T.typeCost['Social posts'], pgC = T.typeCost['New web pages'], posts = M['Social posts'].me * ramF * 12 + M['Social posts'].pr * 12;
     const linksC = planAnn('se') * (1) ;
