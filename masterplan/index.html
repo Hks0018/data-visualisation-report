@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Master Plan</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font:15px system-ui,sans-serif;background:#f4f8fc;color:#062C57}a{color:#05529C}</style>
+</head>
+<body>
+<p id="msg">Loading the Master Plan…</p>
+<script>
+/* Opens the dashboard in place, so this address stays /masterplan. The dashboard starts on the Master Plan when it sees this path. */
+fetch('../index.html').then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+  .then(function (t) { document.open(); document.write(t); document.close(); })
+  .catch(function () { document.getElementById('msg').innerHTML = 'Could not load the Master Plan. <a href="../#mplan">Open it here</a>.'; });
+</script>
+</body>
+</html>
