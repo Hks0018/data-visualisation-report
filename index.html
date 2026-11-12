@@ -2159,77 +2159,72 @@ function buildSugg() {
   const WIN = MEN.filter(r => r.day >= W0 && r.day <= W1);
   const UNITS = { 'youtube.com': ['video', 'videos'], '__news': ['story', 'stories'], '__other': ['story', 'stories'] }, unitOf = p => UNITS[p.k] || ['post', 'posts'];
   const PKEYS = new Set(['youtube.com', 'instagram.com', 'reddit.com', 'facebook.com', 'linkedin.com', 'threads.com', 'bsky.app']), keyOf = r => PKEYS.has(r.dom) ? r.dom : r.src === 'News' ? '__news' : '__other';
-  const PLS = [['youtube.com', 'YouTube', 30], ['instagram.com', 'Instagram', 60], ['reddit.com', 'Reddit', 30], ['facebook.com', 'Facebook', 60], ['linkedin.com', 'LinkedIn', 45], ['threads.com', 'Threads', 60], ['__news', 'News sites', 20], ['bsky.app', 'Bluesky', 30], ['__other', 'Other sites', 20]].map(([k, l, cap]) => {
+  const PLS = [['youtube.com', 'YouTube'], ['instagram.com', 'Instagram'], ['reddit.com', 'Reddit'], ['facebook.com', 'Facebook'], ['linkedin.com', 'LinkedIn'], ['threads.com', 'Threads'], ['__news', 'News sites'], ['bsky.app', 'Bluesky'], ['__other', 'Other sites']].map(([k, l]) => {
     const rr = WIN.filter(r => keyOf(r) === k), t = tally(rr);
-    return { k, l, cap, m: rr.length / WD * MD, g: t.Negative / WD * MD };
+    return { k, l, m: rr.length / WD * MD, g: t.Negative / WD * MD };
   }).sort((a, b) => b.g - a.g);
   const FULL_DAYS = Math.round((W1 - MEN_FIRST) / DAY) + 1, FULLROWS = MEN.filter(r => r.day <= W1);
   const WINS = [['30', 'Last 30 days', 'Oct 11 – Nov 9', WIN, WD], ['all', 'Full period', 'Sep 25 – Nov 9', FULLROWS, FULL_DAYS]];
   const PST = {}; WINS.forEach(([w, , , rows, days]) => { PST[w] = {}; PLS.forEach(p => { const rr = rows.filter(r => keyOf(r) === p.k), t = tally(rr); PST[w][p.k] = { m: rr.length / days * MD, g: t.Negative / days * MD, p: t.Positive / days * MD, n: t.Neutral / days * MD }; }); });
   let WSEL = 'all'; const st = p => PST[WSEL][p.k], wInfo = () => WINS.find(x => x[0] === WSEL);
   const planEl = h('div', { class: 'pcards' }), headEl = h('div', { class: 'phead' }), tabEl = h('div'), PIN = {}, outEls = {}, ipops = {};
-  const defPlan = p => ({ pos: Math.ceil(p.cap / 2), neu: Math.floor(p.cap / 2) });
-  PLS.forEach(p => { PIN[p.k] = defPlan(p); });
-  const GOAL = { pct: 10, unit: 'pts' }, GMAX = { pts: 24, rel: 60 }, pinEls = {};
+  const DEFPLAN = { 'youtube.com': 10, 'reddit.com': 2000, 'instagram.com': 800, 'facebook.com': 2000, '__news': 30, 'threads.com': 800, 'bsky.app': 50, '__other': 50, 'linkedin.com': 60 }, pinEls = {};
+  PLS.forEach(p => { PIN[p.k] = { pos: DEFPLAN[p.k] || 0, neu: 0 }; });
   const toNum = v => { v = Math.round(Number(v)); return isFinite(v) && v > 0 ? Math.min(v, 9999) : 0; };
   const capW = w => w[0].toUpperCase() + w.slice(1);
   const f1 = v => (Math.round(v * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const sgn = v => { const a = Math.abs(v), t = a >= 10 ? String(Math.round(a)) : (Math.round(a * 10) / 10).toFixed(1); return Number(t) === 0 ? '0' : (v > 0 ? '+' : '−') + t; };
-  const pField = (p, key, kind) => { const un = unitOf(p)[1], inp = h('input', { type: 'number', min: '0', max: String(p.cap), step: '1', inputmode: 'numeric', class: 'pin', 'aria-label': p.l + ': ' + kind + ' ' + un + ' a month' }); inp.value = String(PIN[p.k][key]); pinEls[p.k + key] = inp;
-    inp.addEventListener('input', () => { PIN[p.k][key] = Math.min(toNum(inp.value), p.cap); updatePlan(); }); inp.addEventListener('change', () => { inp.value = String(PIN[p.k][key]); });
+  const pField = (p, key, kind) => { const un = unitOf(p)[1], inp = h('input', { type: 'number', min: '0', max: '9999', step: '1', inputmode: 'numeric', class: 'pin', 'aria-label': p.l + ': ' + kind + ' ' + un + ' a month by month 12' }); inp.value = String(PIN[p.k][key]); pinEls[p.k + key] = inp;
+    inp.addEventListener('input', () => { PIN[p.k][key] = toNum(inp.value); updatePlan(); }); inp.addEventListener('change', () => { inp.value = String(PIN[p.k][key]); });
     return h('label', { class: 'pf' }, h('span', null, kind + ' ' + un + ' a month'), inp); };
   const SAMPK = new Set(['youtube.com', 'instagram.com', 'reddit.com', 'facebook.com', 'linkedin.com', 'threads.com', '__news', '__other', 'bsky.app']);
   const planCards = PLS.map(p => { const out = h('div', { class: 'pout' }), pop = h('div', { class: 'ipop', role: 'tooltip' }); outEls[p.k] = out; ipops[p.k] = pop;
     return h('section', { class: 'card pc' }, h('div', { class: 'pnrow' }, h('div', { class: 'pn' }, p.l), h('span', { class: 'ipw' }, h('button', { class: 'ibtn', type: 'button', 'aria-label': 'Details for ' + p.l }, 'i'), pop)), h('div', { class: 'pins' }, pField(p, 'pos', 'Positive'), pField(p, 'neu', 'Neutral')), out,
       SAMPK.has(p.k) ? h('button', { class: 'btn sm psamp', onclick: () => openRefs(REFD.findIndex(x => x.k === p.k)) }, 'Samples', icon('right')) : null); });
   planEl.replaceChildren(...planCards);
-  const goalIn = h('input', { type: 'number', min: '0', max: '60', step: '1', inputmode: 'numeric', class: 'pin', style: 'width:64px', value: String(GOAL.pct), 'aria-label': 'Goal: cut the Negative share by this many percent' });
-  goalIn.addEventListener('input', () => { const v = Number(goalIn.value); GOAL.pct = isFinite(v) ? Math.max(0, Math.min(GMAX[GOAL.unit], v)) : 0; updatePlan(); });
-  goalIn.addEventListener('change', () => { goalIn.value = String(GOAL.pct); });
-  const GUNITS = [['pts', 'points'], ['rel', '% of itself']];
-  const goalSeg = h('span', { class: 'seg', role: 'group', 'aria-label': 'Unit of the goal' }, GUNITS.map(([k, l]) => h('button', { 'aria-pressed': 'false', title: k === 'pts' ? 'Percentage points: 24.9% down 10 points is 14.9%' : 'Percent of the Negative share: 24.9% down 10% is 22.4%', onclick: () => { GOAL.unit = k; GOAL.pct = Math.min(GOAL.pct, GMAX[k]); updatePlan(); } }, l)));
-  const goalBox = h('span', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, h('span', { class: 'note' }, 'Goal: cut the Negative share by'), goalIn, goalSeg, h('button', { class: 'btn sm', type: 'button', title: 'Put every platform back to its practical default', onclick: () => { PLS.forEach(p => { PIN[p.k] = defPlan(p); ['pos', 'neu'].forEach(k => { if (pinEls[p.k + k]) pinEls[p.k + k].value = String(PIN[p.k][k]); }); }); updatePlan(); } }, 'Reset plan'));
-  const winSeg = h('span', { class: 'seg', role: 'group', 'aria-label': 'Period the numbers are based on' }, WINS.map(([w, l, sub]) => h('button', { 'aria-pressed': 'false', title: sub, onclick: () => { WSEL = w; updatePlan(); } }, l)));
+  const MONTHS = ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6', 'Month 7', 'Month 8', 'Month 9', 'Month 10', 'Month 11', 'Month 12'];
   function updatePlan() {
-    [...goalSeg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(GUNITS[i][0] === GOAL.unit))); goalIn.max = String(GMAX[GOAL.unit]); if (document.activeElement !== goalIn) goalIn.value = String(GOAL.pct);
-    [...winSeg.children].forEach((b, i) => b.setAttribute('aria-pressed', String(WINS[i][0] === WSEL)));
     let P0 = 0, N0 = 0, G0 = 0, KP = 0, KN = 0; const trs = [];
     PLS.forEach(p => { const x = st(p), kp = PIN[p.k].pos, kn = PIN[p.k].neu, tot = x.m, tot1 = tot + kp + kn, un = unitOf(p)[1];
-      const g0 = x.g / tot, g1 = x.g / tot1, p0 = x.p / tot, p1 = (x.p + kp) / tot1, n0 = x.n / tot, n1 = (x.n + kn) / tot1, d = (p1 - p0) * 100;
+      const g0 = x.g / tot, g1 = x.g / tot1, p0 = x.p / tot, p1 = (x.p + kp) / tot1, n0 = x.n / tot, n1 = (x.n + kn) / tot1, relP = (1 - tot / tot1) * 100;
       P0 += x.p; N0 += x.n; G0 += x.g; KP += kp; KN += kn;
       trs.push([p.l, f1(x.p), f1(x.n), f1(x.g), f1(tot), pc(p0, 1), pc(n0, 1), pc(g0, 1), fmt(kp), fmt(kn), f1(tot1), pc(p1, 1), pc(n1, 1), pc(g1, 1)]);
       outEls[p.k].replaceChildren(
-        h('div', { class: 'pbig' }, h('b', null, sgn(d)), h('span', null, 'points of positivity')),
-        h('div', { class: 'pshare' }, h('span', { class: 'pb' }, h('i', { style: 'width:' + Math.min(100, g0 * 100) + '%;background:var(--s-neg)' })), h('span', { class: 'pv' }, pc(g0, 1) + ' Negative (' + wInfo()[1].toLowerCase() + ')'), h('span', { class: 'pb' }, h('i', { style: 'width:' + Math.min(100, g1 * 100) + '%;background:var(--s-pos)' })), h('span', { class: 'pv' }, pc(g1, 1) + ' Negative with this plan')),
-        h('div', { class: 'note', style: kp + kn > p.cap ? 'color:var(--s-neg)' : '' }, 'Practical ceiling: ' + p.cap + ' ' + un + ' a month in total' + (kp + kn > p.cap ? '. This plan is above it.' : '')),
+        h('div', { class: 'pbig' }, h('b', null, '−' + f1(relP) + '%'), h('span', null, 'Negative share')),
+        h('div', { class: 'pshare' }, h('span', { class: 'pb' }, h('i', { style: 'width:' + Math.min(100, g0 * 100) + '%;background:var(--s-neg)' })), h('span', { class: 'pv' }, pc(g0, 1) + ' Negative (' + wInfo()[1].toLowerCase() + ')'), h('span', { class: 'pb' }, h('i', { style: 'width:' + Math.min(100, g1 * 100) + '%;background:var(--s-pos)' })), h('span', { class: 'pv' }, pc(g1, 1) + ' Negative at month 12')),
+        h('div', { class: 'note' }, 'About ' + f1((kp + kn) / MD) + ' ' + un + ' a day by month 12'),
       );
       ipops[p.k].replaceChildren(
-        h('div', { class: 'ipt' }, 'Share of mentions'),
+        h('div', { class: 'ipt' }, 'Share of mentions at month 12'),
         h('div', { class: 'ipr' }, h('span', null, 'Positive'), h('b', null, pc(p0, 1) + ' → ' + pc(p1, 1))),
         h('div', { class: 'ipr' }, h('span', null, 'Neutral'), h('b', null, pc(n0, 1) + ' → ' + pc(n1, 1))),
         h('div', { class: 'ipr' }, h('span', null, 'Negative'), h('b', null, pc(g0, 1) + ' → ' + pc(g1, 1))),
-        h('div', { class: 'ipn' }, 'Negative down ' + f1((g0 - g1) * 100) + ' points'),
+        h('div', { class: 'ipn' }, 'Negative share down ' + f1(relP) + '%'),
         h('div', { class: 'ipt' }, 'Mentions a month'),
         h('div', { class: 'ipr' }, h('span', null, 'Positive'), h('b', null, f1(x.p) + (kp ? ' + ' + fmt(kp) : ''))),
         h('div', { class: 'ipr' }, h('span', null, 'Neutral'), h('b', null, f1(x.n) + (kn ? ' + ' + fmt(kn) : ''))),
         h('div', { class: 'ipr' }, h('span', null, 'Negative'), h('b', null, f1(x.g))),
         h('div', { class: 'ipr' }, h('span', null, 'Total'), h('b', null, f1(tot) + ' → ' + f1(tot1))),
-        h('div', { class: 'ipt' }, 'Over a year'),
-        h('div', { class: 'ipr' }, h('span', null, capW(un)), h('b', null, '≈ ' + fmt((kp + kn) * 12))));
+        h('div', { class: 'ipt' }, 'Posts in the first year'),
+        h('div', { class: 'ipr' }, h('span', null, capW(un)), h('b', null, '≈ ' + fmt(rampSum(kp + kn)))));
     });
-    const T0 = P0 + N0 + G0, K = KP + KN, T1 = T0 + K, dd = (G0 / T0 - G0 / T1) * 100, rel = (1 - T0 / T1) * 100;
+    const T0 = P0 + N0 + G0, K = KP + KN, T1 = T0 + K, s0 = G0 / T0, s1 = G0 / T1, rel = (1 - T0 / T1) * 100;
+    /* build-up: month m runs at m/12 of the full pace */
+    const ramp = MONTHS.map((l, i) => { const f = (i + 1) / 12; let km = 0; PLS.forEach(p => { km += Math.round(PIN[p.k].pos * f) + Math.round(PIN[p.k].neu * f); }); return { l, km, sh: G0 / (T0 + km) }; });
+    let cum = 0; const rrows = ramp.map(r => { cum += r.km; return [r.l, fmt(r.km), pc(r.sh, 1), f1((1 - r.sh / s0) * 100) + '%', fmt(cum)]; });
+    rrows.push({ hl: true, c: ['The year', fmt(cum), pc(ramp[11].sh, 1), f1((1 - ramp[11].sh / s0) * 100) + '%', fmt(cum)] });
     trs.push({ hl: true, c: ['All platforms', f1(P0), f1(N0), f1(G0), f1(T0), pc(P0 / T0, 1), pc(N0 / T0, 1), pc(G0 / T0, 1), fmt(KP), fmt(KN), f1(T1), pc((P0 + KP) / T1, 1), pc((N0 + KN) / T1, 1), pc(G0 / T1, 1)] });
-    tabEl.replaceChildren(tcard('Per month, by platform', 'Average mentions in a 30-day month on each platform for the period selected above, then the same month with your posts added. Positive, Neutral and Negative are counts a month; the percentages are shares of that platform’s mentions.',
-      dtab(['Platform', 'Positive a month', 'Neutral a month', 'Negative a month', 'Total a month', 'Positive %', 'Neutral %', 'Negative %', 'Positive posts added', 'Neutral posts added', 'Total with plan', 'Positive % with plan', 'Neutral % with plan', 'Negative % with plan'], trs, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])));
-    const s0 = G0 / T0, s1 = G0 / T1, tgt = Math.max(0.005, GOAL.unit === 'rel' ? s0 * (1 - GOAL.pct / 100) : s0 - GOAL.pct / 100), needNeg = Math.max(0, G0 - tgt * T1), goalTxt = GOAL.pct + (GOAL.unit === 'pts' ? ' points' : '%');
-    headEl.replaceChildren(h('div', { class: 'phb' }, h('span', { class: 'pwin' }, 'Based on the ' + wInfo()[1].toLowerCase() + ' (' + wInfo()[2] + ') · all sources together · a month is 30 days'), h('b', null, 'Negative goes from ' + pc(s0) + ' to ' + pc(s1)),
-      h('small', null, (dd > 0.049 ? 'Down ' + f1(dd) + ' points, a ' + f1(rel) + '% cut in the Negative share, from posting alone' : 'No change') + '. That is ' + fmt(KP) + ' Positive and ' + fmt(KN) + ' Neutral posts, videos and stories a month, about ' + fmt(K * 12) + ' over a year. Positive goes from ' + pc(P0 / T0) + ' to ' + pc((P0 + KP) / T1) + ' and Neutral from ' + pc(N0 / T0) + ' to ' + pc((N0 + KN) / T1) + '. Per month, ' + fmt(Math.round(T0)) + ' mentions become ' + fmt(Math.round(T1)) + '. Your posts are assumed to draw no Negative replies or mentions at all, so the Negative count stays at ' + fmt(Math.round(G0)) + ' a month.'),
-      h('small', { style: 'opacity:1;font-weight:600' }, GOAL.pct <= 0 ? 'No goal set.' : s1 <= tgt + 1e-9 ? 'Your goal of ' + goalTxt + ' (to ' + pc(tgt) + ') is met by posting alone.' : 'Your goal of ' + goalTxt + ' means reaching ' + pc(tgt) + '. Posting at a practical level gets to ' + pc(s1) + ', so the other ' + f1((s1 - tgt) * 100) + ' points have to come from fewer Negative mentions: about ' + fmt(Math.round(needNeg)) + ' fewer a month (' + Math.round(needNeg / G0 * 100) + '% of today’s ' + fmt(Math.round(G0)) + '), turned Neutral by the levers above.')));
+    tabEl.replaceChildren(
+      tcard('Month by month', 'The plan builds up evenly: month 1 runs at one twelfth of the full pace and month 12 at the full pace. Negative share is each month’s share of that month’s mentions.', dtab(['Month', 'Posts, videos and stories', 'Negative share', 'Negative share cut', 'Total so far'], rrows, [1, 2, 3, 4])),
+      tcard('Per month at the full pace, by platform', 'Average mentions in a 30-day month on each platform for the period selected above, then the same month with your month-12 posts added. Positive, Neutral and Negative are counts a month; the percentages are shares of that platform’s mentions.',
+        dtab(['Platform', 'Positive a month', 'Neutral a month', 'Negative a month', 'Total a month', 'Positive %', 'Neutral %', 'Negative %', 'Positive posts added', 'Neutral posts added', 'Total with plan', 'Positive % with plan', 'Neutral % with plan', 'Negative % with plan'], trs, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])));
+    headEl.replaceChildren(h('div', { class: 'phb' }, h('b', null, 'Negative goes from ' + pc(s0) + ' to ' + pc(s1) + ' in a year'),
+      h('small', null, (rel > 0.049 ? 'A ' + f1(rel) + '% cut in the Negative share' : 'No change') + '. Build up to ' + fmt(KP) + ' Positive and ' + fmt(KN) + ' Neutral posts, videos and stories a month by month 12. It starts at ' + fmt(ramp[0].km) + ' in month 1 and adds about ' + fmt(Math.round(K / 12)) + ' a month, ' + fmt(cum) + ' in the year. Positive goes from ' + pc(P0 / T0) + ' to ' + pc((P0 + KP) / T1) + ' and Neutral from ' + pc(N0 / T0) + ' to ' + pc((N0 + KN) / T1) + '. Your posts are assumed to draw no Negative replies or mentions at all, so the Negative count stays at ' + fmt(Math.round(G0)) + ' a month.')));
   }
+  const rampSum = k => { let c = 0; for (let m = 1; m <= 12; m++) c += Math.round(k * m / 12); return c; };
   updatePlan();
-  const D = dsec('C', 'What posting more would do', 'Type how many Positive and Neutral videos, posts or stories a month you could publish on each platform. Each box stops at a practical ceiling for that platform. Each post counts as a new mention of that kind, so the total grows and the Negative share falls, but only a little: posting adds a few hundred mentions to many thousand. Use Samples to see example posts.', [
-    h('section', { class: 'card pad' }, h('div', { class: 'frow', style: 'justify-content:space-between;gap:12px' }, h('h2', null, 'My monthly plan'), h('div', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, goalBox, h('span', { class: 'note' }, 'Data from:'), winSeg)), headEl, planEl,
-      h('div', { class: 'note' }, 'How it is worked out: every Positive post you publish adds one Positive mention to that platform’s month, and every Neutral post adds one Neutral mention. This takes the best case: none of your posts, and none of the replies to them, is Negative, so the Negative mentions stay exactly as they are today and the new Negative share is Negative ÷ (mentions + all posts). Neutral posts dilute Negative too, but they do not raise the Positive share. The monthly counts are each platform’s average daily count over the period selected above (last 30 days, Oct 11 to Nov 9, or the full period, Sep 25 to Nov 9) times 30, counting every source, so the full-period share matches the report’s 24.9%. The ceilings are about a post a day on the busiest platforms and fewer on the rest: 30 videos on YouTube, 60 posts on Instagram, Facebook and Threads, 45 on LinkedIn, 30 on Reddit and Bluesky, 20 stories on news and other sites. The goal box says how far the Negative share should fall: “points” takes that many percentage points off it (24.9% down 10 points is 14.9%), “% of itself” takes that share of it (24.9% down 10% is 22.4%). What posting cannot deliver is shown as the number of Negative mentions that must also fall.')),
+  const D = dsec('C', 'What posting more would do', 'Type how many Positive and Neutral videos, posts or stories a month each platform reaches by month 12. The plan builds up evenly from month 1, and the table shows the Negative share month by month. Each post counts as a new mention of that kind, so the total grows and the Negative share falls. Use Samples to see example posts.', [
+    h('section', { class: 'card pad' }, h('h2', null, 'My monthly plan'), headEl, planEl,
+      h('div', { class: 'note' }, 'How it is worked out: every Positive post you publish adds one Positive mention to that platform’s month, and every Neutral post adds one Neutral mention. This takes the best case: none of your posts, and none of the replies to them, is Negative, so the Negative mentions stay exactly as they are today and the new Negative share is Negative ÷ (mentions + all posts). The plan is built up evenly over the 12 months: month 1 runs at one twelfth of the numbers in the boxes and month 12 at the full numbers. Type in any platform’s boxes to make your own plan. The monthly counts are each platform’s average daily count over the period selected above (last 30 days, Oct 11 to Nov 9, or the full period, Sep 25 to Nov 9) times 30, counting every source, so the full-period share matches the report’s 24.9%.')),
     tabEl,
     card('When to post', 'From the report’s activity heatmap: when the conversation is busiest.', facts([['Fri, Sun', 'busiest days: ' + fmt(fri[7]) + ' and ' + fmt(sun[7]) + ' mentions'], ['Slots 4 to 5', 'afternoon and evening carry the most volume (23% and 21% of all mentions)'], ['Sun, slot 1', 'single highest cell (1,517): check what drives it before scheduling there']]))]);
 
@@ -2694,7 +2689,7 @@ function buildPSugg() {
     kpis([
       { l: 'AI visibility score', v: (vis2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(vis) + '. About ' + fmt(needVis) + ' more of the ' + fmt(R8) + ' responses would name the brand' },
       { l: 'AI brand mentions', v: fmt(bm2), unit: 'target', s: 'Today ' + fmt(bmN) + ', so ' + fmt(bm2 - bmN) + ' more. These are the same responses that make up the visibility score' },
-      { l: 'Share of voice', v: (sov2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(sov) + '. About ' + fmt(needSov) + ' more brand mentions, with other companies unchanged' },
+      { l: 'Share of voice', v: (sov2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(sov) + '. About ' + fmt(needSov) + ' more brand mentions, with competitors unchanged' },
       { l: 'Favourable sentiment', v: (fs2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(fs) + '. About ' + fmt(needFav) + ' of the ' + fmt(neuN + unfN) + ' Neutral or Unfavourable mentions would need to turn Favourable' }]),
     tcard('How each number is worked out', 'Read from the ' + fmt(N) + ' prompts, each answered by 8 AI providers (' + fmt(R8) + ' responses). The target is today’s value plus 10%. The last column says which levers below move it.',
       dtab(['Metric', 'How it is worked out', 'Today', 'Target (+10%)', 'What it takes', 'Levers'], [
@@ -2704,12 +2699,7 @@ function buildPSugg() {
         ['Favourable sentiment', 'Favourable brand mentions ÷ scored brand mentions (' + fmt(favN) + ' of ' + fmt(scN) + ').', q1(fs), q1(fs2), fmt(needFav) + ' mentions turn Favourable', '4, 5']], [2, 3]))]);
 
   /* B. the picture */
-  const A = dsec('B', 'The picture', 'The brand is named in ' + p0(allCov) + ' of AI answers on average, but ' + fmt(zero.length) + ' of ' + fmt(N) + ' prompts do not name it at all. Three things stand out.', [
-    kpis([
-      { l: 'Brand coverage %', v: Math.round(allCov), unit: '%', s: 'Average share of answers that name the brand, across ' + fmt(N) + ' prompts. ' + fmt(bmN) + ' brand mentions in all' },
-      { l: 'Prompts with no brand mention', v: fmt(zero.length), unit: 'prompts', s: s0(zero.length, N) + ' of all prompts. Click to open them', onclick: goP(c => pickMulti(c, 'band', '0%')) },
-      { l: 'Unfavourable brand mentions', v: fmt(unfN), unit: 'mentions', s: s0(unfN, bmN) + ' of brand mentions, in ' + fmt(unfP.length) + ' prompts. Click to open them', onclick: goP(c => { c.state.bool.unf = true; }) },
-      { l: 'Commercial against Navigational', v: p0(cm.cov), unit: 'vs ' + p0(nv.cov), s: 'Brand coverage % when people compare or choose, against when they look for the brand by name' }]),
+  const A = dsec('B', 'The picture', 'The brand is named in ' + p0(allCov) + ' of AI answers on average, but ' + fmt(zero.length) + ' of ' + fmt(N) + ' prompts do not name it at all.', [
     h('div', { class: 'charts' },
       card('Brand coverage % by Intent', 'Average share of answers that name the brand. The tick marks the overall ' + p0(allCov) + '. Click an Intent to open its prompts.', hbars(IN.map(x => ({ label: x.k, v: x.cov, text: p0(x.cov), sub: fmt(x.n) + ' prompts', color: Math.round(x.cov) < Math.round(allCov) ? 'var(--s-neg)' : 'var(--s-pos)', onclick: goP(c => pickMulti(c, 'intent', x.k)) })), { max: 100, ref: allCov, refLabel: 'Overall Brand coverage % (' + p0(allCov) + ').' })),
       card('Prompts by Brand coverage %', 'How the ' + fmt(N) + ' prompts split by how often the answers name the brand. Click a band to open its prompts.', stackBar(bands.map(b => ({ label: b.label, v: +(b.n / N * 100).toFixed(1), color: b.color, onclick: goP(c => pickMulti(c, 'band', b.label)) })), { note: 'Prompts at 0% and at 100% make up ' + s0(zero.length + P.filter(r => r.cov === 100).length, N) + ' of all prompts: the brand is either always named or never.' })))]);
@@ -2728,11 +2718,11 @@ function buildPSugg() {
   /* D. post calculator: what publishing more would do */
   const CHS = [['own', 'Own sites', 20, ['page', 'pages'], d => OWN(d)], ['news', 'News and press', 12, ['article', 'articles'], (d, r) => r.wt === 'News and magazine website'], ['gov', 'Government and agencies', 4, ['release', 'releases'], d => /\.(gov|nic)\.in$/.test(d || '')], ['info', 'Informational and research sites', 4, ['report', 'reports'], (d, r) => r.wt === 'Informational website'], ['yt', 'YouTube', 8, ['video', 'videos'], d => d === 'youtube.com'], ['li', 'LinkedIn', 20, ['post', 'posts'], d => d === 'linkedin.com']].map(([k, l, cap, un, test]) => ({ k, l, cap, un, test, cit: 0 }));
   withDom.forEach(r => { const c = CHS.find(x => x.test(r.dom, r)); if (c) c.cit++; });
-  const PCIN = {}, PCG = { f: 1 }, pcEls = {}, pcOut = {}, defPC = c => { const p = Math.round(c.cap * 0.75); return { pos: p, neu: c.cap - p }; };
+  const PCIN = {}, PCG = { f: 1 }, pcEls = {}, pcOut = {}, DEFPC = { own: 10, news: 5, gov: 0, info: 40, yt: 10, li: 60 }, defPC = c => ({ pos: DEFPC[c.k] || 0, neu: 0 });
   CHS.forEach(c => { PCIN[c.k] = defPC(c); });
   const pcHead = h('div', { class: 'phead' }), pcCards = h('div', { class: 'pcards' }), pcTab = h('div'), room = R8 - bmN;
-  const pcField = (c, key, kind) => { const inp = h('input', { type: 'number', min: '0', max: String(c.cap), step: '1', inputmode: 'numeric', class: 'pin', 'aria-label': c.l + ': ' + kind + ' ' + c.un[1] + ' a month' }); inp.value = String(PCIN[c.k][key]); pcEls[c.k + key] = inp;
-    inp.addEventListener('input', () => { const v = Math.round(Number(inp.value)); PCIN[c.k][key] = isFinite(v) && v > 0 ? Math.min(v, c.cap) : 0; drawPC(); }); inp.addEventListener('change', () => { inp.value = String(PCIN[c.k][key]); });
+  const pcField = (c, key, kind) => { const inp = h('input', { type: 'number', min: '0', max: '9999', step: '1', inputmode: 'numeric', class: 'pin', 'aria-label': c.l + ': ' + kind + ' ' + c.un[1] + ' a month' }); inp.value = String(PCIN[c.k][key]); pcEls[c.k + key] = inp;
+    inp.addEventListener('input', () => { const v = Math.round(Number(inp.value)); PCIN[c.k][key] = isFinite(v) && v > 0 ? Math.min(v, 9999) : 0; drawPC(); }); inp.addEventListener('change', () => { inp.value = String(PCIN[c.k][key]); });
     return h('label', { class: 'pf' }, h('span', null, kind + ' ' + c.un[1] + ' a month'), inp); };
   CHS.forEach(c => { const out = h('div', { class: 'pout' }); pcOut[c.k] = out; pcCards.append(h('section', { class: 'card pc' }, h('div', { class: 'pnrow' }, h('div', { class: 'pn' }, c.l)), h('div', { class: 'pins' }, pcField(c, 'pos', 'Favourable'), pcField(c, 'neu', 'Neutral')), out)); });
   const pcG = h('input', { type: 'number', min: '0', max: '20', step: '0.5', inputmode: 'decimal', class: 'pin', style: 'width:64px', value: '1', 'aria-label': 'Responses that start naming the brand for each piece published' });
@@ -2745,7 +2735,7 @@ function buildPSugg() {
     const vis = m => (bmN + adds(m)) / R8, bmF = m => bmN + adds(m), sovF = m => (bmN + adds(m)) / (tmN + adds(m)), favF = m => (favN + adds(m) * ff) / (scN + adds(m));
     const mo = (fn, t) => { const m = monthsTo(fn, t); return m == null ? 'Not at this pace' : m === 1 ? '1 month' : m > 24 ? 'Over ' + Math.floor(m / 12) + ' years' : m + ' months'; };
     CHS.forEach(c => { const k = PCIN[c.k].pos + PCIN[c.k].neu, over = false;
-      pcOut[c.k].replaceChildren(h('div', { class: 'pbig' }, h('b', null, '+' + fmt(Math.round(k * PCG.f * 10) / 10)), h('span', null, 'responses name the brand a month')), h('div', { class: 'note' }, c.cit ? s0(c.cit, withDom.length) + ' of today’s citations (' + fmt(c.cit) + ')' : 'No citations today'), h('div', { class: 'note' }, 'Practical ceiling: ' + c.cap + ' ' + c.un[1] + ' a month in total')); });
+      pcOut[c.k].replaceChildren(h('div', { class: 'pbig' }, h('b', null, '+' + fmt(Math.round(k * PCG.f * 10) / 10)), h('span', null, 'responses name the brand a month')), h('div', { class: 'note' }, c.cit ? s0(c.cit, withDom.length) + ' of today’s citations (' + fmt(c.cit) + ')' : 'No citations today')); });
     pcHead.replaceChildren(h('div', { class: 'phb' }, h('span', { class: 'pwin' }, 'After one month of this plan · ' + fmt(R8) + ' responses today, ' + fmt(bmN) + ' of them name the brand'), h('b', null, 'AI visibility goes from ' + q1(vis(0)) + ' to ' + q1(vis(1))),
       h('small', null, 'That is ' + fmt(kp) + ' Favourable and ' + fmt(kn) + ' Neutral pieces a month, about ' + fmt(K * 12) + ' over a year. At ' + PCG.f + ' response' + (PCG.f === 1 ? '' : 's') + ' per piece, ' + fmt(Math.round(gain * 10) / 10) + ' more responses name the brand each month. AI brand mentions go from ' + fmt(bmN) + ' to ' + fmt(Math.round(bmF(1))) + ', share of voice from ' + q1(sov) + ' to ' + q1(sovF(1)) + ' and Favourable sentiment from ' + q1(fs) + ' to ' + q1(favF(1)) + '.'),
       h('small', { style: 'opacity:1;font-weight:600' }, 'Your pieces are assumed to draw no Unfavourable answers at all, so Unfavourable mentions stay at ' + fmt(unfN) + '. Pieces stay live and keep working, so each month adds to the last. The 10% targets would be reached in: visibility ' + mo(vis, vis2).toLowerCase() + ', brand mentions ' + mo(bmF, bm2).toLowerCase() + ', share of voice ' + mo(sovF, sov2).toLowerCase() + ', Favourable sentiment ' + mo(favF, fs2).toLowerCase() + '.')));
@@ -2756,7 +2746,7 @@ function buildPSugg() {
   drawPC();
   const PC = dsec('D', 'What publishing more would do', 'Type how many Favourable and Neutral pages, articles, releases, videos and posts a month you could publish on each channel. Each piece is counted as one more response that names the brand, so the visibility score, brand mentions and share of voice rise, and the Favourable share moves with the mix. This is the best case: none of the new pieces draws an Unfavourable answer.', [
     h('section', { class: 'card pad' }, h('div', { class: 'frow', style: 'justify-content:space-between;gap:12px' }, h('h2', null, 'My monthly publishing plan'), h('div', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, h('span', { class: 'note' }, 'Responses gained per piece:'), pcG, pcReset)), pcHead, pcCards,
-      h('div', { class: 'note' }, 'How it is worked out: every piece you publish is assumed to turn ' + 'the number of responses set above, which do not name the brand today, into ones that do (at most the ' + fmt(room) + ' that do not). A Favourable piece makes them Favourable mentions and a Neutral piece makes them Neutral ones. Nothing is turned Unfavourable. AI visibility is responses that name the brand ÷ ' + fmt(R8) + '. Share of voice adds the same mentions to the brand’s ' + fmt(bmN) + ' and to all ' + fmt(tmN) + '. Favourable sentiment is Favourable ÷ scored mentions, so Neutral pieces pull it down, and new pieces move it very little because it is already high: the bigger lever is turning existing Neutral and Unfavourable mentions Favourable (lever 4). One response per piece is a round-number guess: a strong page can win several answers, a weak one none, so test it and change the number. The ceilings are 20 pages on own sites, 12 articles, 4 government releases, 4 reports, 8 videos and 20 LinkedIn posts a month. The percentage beside each channel is its share of the ' + fmt(withDom.length) + ' citations in today’s answers, so the channels the answers already cite are the best place to put pieces first. Publish accurate, useful material only.')),
+      h('div', { class: 'note' }, 'How it is worked out: every piece you publish is assumed to turn ' + 'the number of responses set above, which do not name the brand today, into ones that do (at most the ' + fmt(room) + ' that do not). A Favourable piece makes them Favourable mentions and a Neutral piece makes them Neutral ones. Nothing is turned Unfavourable. AI visibility is responses that name the brand ÷ ' + fmt(R8) + '. Share of voice adds the same mentions to the brand’s ' + fmt(bmN) + ' and to all ' + fmt(tmN) + '. Favourable sentiment is Favourable ÷ scored mentions, so Neutral pieces pull it down, and new pieces move it very little because it is already high: the bigger lever is turning existing Neutral and Unfavourable mentions Favourable (lever 4). One response per piece is a round-number guess: a strong page can win several answers, a weak one none, so test it and change the number. The percentage beside each channel is its share of the ' + fmt(withDom.length) + ' citations in today’s answers, so the channels the answers already cite are the best place to put pieces first. Publish accurate, useful material only.')),
     pcTab]);
 
   /* E. where to focus first */
