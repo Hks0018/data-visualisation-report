@@ -2399,7 +2399,7 @@ function buildSugg() {
   return root;
 }
 const rcOfV = k => REP.media.reach.find(r => r[0] === k);
-VIEWS.sugg = { custom: true, lazy: async () => { await loadMen(); VIEWS.sugg.ready = true; }, loadLabel: 'Suggestions', label: 'Suggestions', noun: 'mentions', nrows: MEN_N, title: 'Suggestions', sub: 'Ways to reduce negativity for the brand, drawn from the report and the list of mentions: where it comes from, what to do about it.', build: buildSugg };
+VIEWS.sugg = { custom: true, lazy: async () => { await loadMen(); VIEWS.sugg.ready = true; }, loadLabel: 'Suggestions', label: 'Suggestions', noun: 'mentions', nrows: MEN_N, title: 'P1 · Mentions suggestions', sub: 'Ways to reduce negativity for the brand, drawn from the report and the list of mentions: where it comes from, what to do about it.', build: buildSugg };
 
 /* ---------- Prompts tab: Prompts, Citations, Sources, Pages ---------- */
 const PM = DATA.pm;
@@ -2826,7 +2826,7 @@ function buildPSugg() {
   root.append(GL, A, B, PC, C, D, E);
   return root;
 }
-VIEWS.psugg = { custom: true, lazy: async () => { await ensure('pmp'); await ensure('pmc'); VIEWS.psugg.ready = true; }, loadLabel: 'Suggestions', label: 'Suggestions', noun: 'prompts', nrows: PM.n.pr, title: 'Suggestions', sub: 'A plan to lift four numbers by 10%: AI visibility score, AI brand mentions, share of voice and Favourable sentiment. It is drawn from the prompts and their citations: where the brand is missing, what to do about it, and the number that shows it worked.', build: buildPSugg };
+VIEWS.psugg = { custom: true, lazy: async () => { await ensure('pmp'); await ensure('pmc'); VIEWS.psugg.ready = true; }, loadLabel: 'Suggestions', label: 'Suggestions', noun: 'prompts', nrows: PM.n.pr, title: 'P2 · Prompts suggestions', sub: 'A plan to lift four numbers by 10%: AI visibility score, AI brand mentions, share of voice and Favourable sentiment. It is drawn from the prompts and their citations: where the brand is missing, what to do about it, and the number that shows it worked.', build: buildPSugg };
 
 /* ---------- SEO: Suggestions (500 more keywords in the top 10) ---------- */
 function buildSSugg() {
@@ -3105,7 +3105,7 @@ function buildSSugg() {
   root.append(GL, A, C, D, PL, E, F, G);
   return root;
 }
-VIEWS.ssugg = { custom: true, lazy: async () => { await ensure('rkw'); await ensure('rbl'); VIEWS.ssugg.ready = true; }, loadLabel: 'Suggestions', label: 'Suggestions', noun: 'keywords', nrows: RES.n.kw, title: 'Suggestions', sub: 'A plan to take at least 500 more keywords into the top 10: 30% Branded and 70% Non-branded, with no Negative or Controversy keywords. It is drawn from the SEO keyword list: where the keywords rank, which ones to pursue, what to do about it and what the work could deliver.', build: buildSSugg };
+VIEWS.ssugg = { custom: true, lazy: async () => { await ensure('rkw'); await ensure('rbl'); VIEWS.ssugg.ready = true; }, loadLabel: 'Suggestions', label: 'Suggestions', noun: 'keywords', nrows: RES.n.kw, title: 'P3 · SEO suggestions', sub: 'A plan to take at least 500 more keywords into the top 10: 30% Branded and 70% Non-branded, with no Negative or Controversy keywords. It is drawn from the SEO keyword list: where the keywords rank, which ones to pursue, what to do about it and what the work could deliver.', build: buildSSugg };
 
 /* ---------- Master Plan: the Mentions, Prompts and SEO plans in one view ---------- */
 function buildMaster() {
@@ -3184,18 +3184,18 @@ function buildMaster() {
     { l: 'Quality gates', v: '8', unit: 'gates', s: 'Every piece passes its gate before it goes out (section E)' },
     { l: 'Outcomes at month 12', v: p1(me.s1), unit: 'Negative', s: 'From ' + p1(me.s0) + '. AI visibility ' + p1(pr.months[12].vis) + ' (from ' + p1(pr.months[0].vis) + '), and ' + rd(se.y.t) + ' more keywords in the top 10 of ' + rd(se.goal) }]));
   drawA();
-  const A = dsec('A', 'The plan in one view', 'Three plans in one place: Mentions (cut Negative), Prompts (be named more often by AI) and SEO (500 more keywords in the top 10). Every number is read from the three Suggestions pages, so it changes when you change them there.', [aWrap]);
+  const A = dsec('A', 'The plan in one view', 'Three plans in one place: Mentions (cut Negative), Prompts (be named more often by AI) and SEO (500 more keywords in the top 10). Every number is read from the three suggestions pages, P1, P2 and P3, so it changes when you change them there.', [aWrap]);
 
   /* ---- B. the three plans, pin-pointed ---- */
   const negTop = [...me.plats].sort((a, b) => b.neg - a.neg), negAll = me.plats.reduce((a, p) => a + p.neg, 0), fullPace = me.K;
   const plan = (key, title, goal, big, bigSub, rows, head, pins, watch, openId) => h('section', { class: 'card lev' },
-    h('div', { class: 'frow', style: 'gap:8px' }, h('span', { class: 'lnum', style: 'background:' + COL[key] }, NAME[key][0]), h('span', { class: 'tag t' + tagIdx(NAME[key]) }, NAME[key])),
+    h('div', { class: 'frow', style: 'gap:8px' }, h('span', { class: 'lnum', style: 'background:' + COL[key] }, 'P' + ({ me: 1, pr: 2, se: 3 })[key]), h('span', { class: 'tag t' + tagIdx(NAME[key]) }, NAME[key])),
     h('h3', null, title), h('p', { class: 'ff' }, goal),
     h('div', { class: 'pbig' }, h('b', null, big), h('span', null, bigSub)),
     dtab(head, rows, [1, 2]),
     h('div', { class: 'fa' }, h('b', null, 'Pin points'), h('ul', null, pins.map(x => h('li', null, x)))),
     h('div', { class: 'trk' }, h('b', null, 'Watch'), h('span', null, watch)),
-    h('button', { class: 'btn primary', type: 'button', onclick: () => show(openId) }, 'Open the ' + NAME[key] + ' plan', icon('right')));
+    h('button', { class: 'btn primary', type: 'button', onclick: () => show(openId) }, 'Open P' + ({ me: 1, pr: 2, se: 3 })[key] + ': ' + NAME[key] + ' suggestions', icon('right')));
   const meRows = [...me.plats].sort((a, b) => (b.pos + b.neu) - (a.pos + a.neu)).map(p => [p.l, fmt(p.pos + p.neu) + ' ' + p.unit, fmt(Math.round(p.neg))]);
   const prRows = [...pr.chans].sort((a, b) => (b.pos + b.neu) - (a.pos + a.neu)).filter(c => c.pos + c.neu > 0).map(c => [c.l, fmt(c.pos + c.neu) + ' ' + c.unit, fmt(c.cit)]);
   const seRows = [['New web pages', rd(ct.newPm) + ' a month', rd(sp.newYear) + ' in 12 months'], ['Existing pages improved', rd(ct.impPm) + ' a month', rd(sp.impTotal) + ' in all'], ['New links to earn', rd(sp.linksPm) + ' a month', rd(sp.linksYear) + ' in 12 months'], ['News posts and press notes', rd(ct.news) + ' a month', rd(ct.news * 12) + ' in 12 months'], ['Expert articles', rd(ct.articles) + ' a month', rd(ct.articles * 12) + ' in 12 months'], ['Videos, PDFs and reports', rd(ct.videos) + ' + ' + rd(ct.pdfs) + ' a month', rd((ct.videos + ct.pdfs) * 12) + ' in 12 months']];
@@ -3347,7 +3347,7 @@ function buildMaster() {
   root.append(A, B, C, D, E, Fsec);
   return root;
 }
-VIEWS.mplan = { custom: true, fresh: true, lazy: async () => { await ensure('ssugg'); await ensure('psugg'); await ensure('sugg'); ['sugg', 'psugg', 'ssugg'].forEach(id => { const c = VIEWS[id]; if (!c.el) c.el = c.build(); }); VIEWS.mplan.ready = true; }, loadLabel: 'the Master Plan', label: 'Master Plan', noun: 'plans', nrows: 3, title: 'Master Plan', sub: 'The Mentions, Prompts and SEO plans together: what each is for, how much content they ask for, what they deliver over 12 months, and what it takes to do it well.', build: buildMaster };
+VIEWS.mplan = { custom: true, fresh: true, lazy: async () => { await ensure('ssugg'); await ensure('psugg'); await ensure('sugg'); ['sugg', 'psugg', 'ssugg'].forEach(id => { const c = VIEWS[id]; if (!c.el) c.el = c.build(); }); VIEWS.mplan.ready = true; }, loadLabel: 'the Master Plan', label: 'Master Plan', noun: 'plans', nrows: 3, title: 'Master Plan', sub: 'The plan for the whole programme. P1 Mentions, P2 Prompts and P3 SEO each have their own suggestions page, opened from here. This page shows how much content they ask for together, what they deliver over 12 months, and what it takes to do it well.', build: buildMaster };
 
 /* ---------- shell ---------- */
 const NAV = [['dash', 'Dashboard', 'chart'], ['mentions', 'Mentions', 'at'], ['sugg', 'Suggestions', 'tag'], ['research', 'SEO', 'key'], ['prompts', 'Prompts', 'chat'], ['psugg', 'Suggestions', 'tag'], ['ssugg', 'Suggestions', 'tag'], ['mplan', 'Master Plan', 'plan']];
@@ -3400,11 +3400,11 @@ let jr = 0; addEventListener('scroll', () => { if (!jr) jr = requestAnimationFra
 function show(id) {
   if (!NAV.some(n => n[0] === id) && !Object.values(GROUPS).some(g => g.subs.includes(id))) id = 'dash';
   const tab = tabOf(id); if (GROUPS[tab]) lastSub[tab] = id;
-  closeDrawer(); closePops(); if (typeof closeModal === 'function') closeModal();
+  closeDrawer(); closePops(); if (typeof closeModal === 'function') closeModal(); nav.style.display = id === 'mplan' ? 'none' : ''; if (id !== 'mplan') requestAnimationFrame(moveInd);
   nav.querySelectorAll('button').forEach(b => b.removeAttribute('aria-current'));
   { const nb = nav.querySelector('[data-id="' + tab + '"]'); if (nb) nb.setAttribute('aria-current', 'page'); }
   const [t, s] = [VIEWS[id].title, VIEWS[id].sub];
-  document.getElementById('vTitle').textContent = t; document.getElementById('vSub').textContent = s; { const va = document.getElementById('vAction'); va.replaceChildren(); if (id === 'mentions') va.append(h('button', { class: 'btn primary vabtn', onclick: () => show('sugg') }, icon('tag'), 'Suggestions', icon('right'))); else if (id === 'sugg') va.append(h('button', { class: 'btn vabtn', onclick: () => show('mentions') }, icon('left'), 'Back to Mentions')); else if (['pmp', 'pmc', 'pms', 'pmg'].includes(id)) va.append(h('button', { class: 'btn primary vabtn', onclick: () => show('psugg') }, icon('tag'), 'Suggestions', icon('right'))); else if (id === 'psugg') va.append(h('button', { class: 'btn vabtn', onclick: () => show(lastSub.prompts) }, icon('left'), 'Back to Prompts')); else if (RSUBS.includes(id)) va.append(h('button', { class: 'btn primary vabtn', onclick: () => show('ssugg') }, icon('tag'), 'Suggestions', icon('right'))); else if (id === 'ssugg') va.append(h('button', { class: 'btn vabtn', onclick: () => show(lastSub.research) }, icon('left'), 'Back to SEO')); }
+  document.getElementById('vTitle').textContent = t; document.getElementById('vSub').textContent = s; { const va = document.getElementById('vAction'); va.replaceChildren(); if (['sugg', 'psugg', 'ssugg'].includes(id)) va.append(h('button', { class: 'btn vabtn', onclick: () => show('mplan') }, icon('left'), 'Back to the Master Plan')); }
   let el, cfg = null;
   if (VIEWS[id].lazy && !VIEWS[id].ready) {
     const c = VIEWS[id]; el = h('section', { class: 'card pad loading' }, h('h2', null, 'Unpacking ' + (c.loadLabel || c.label)), h('div', { class: 'sub' }, fmt(c.nrows) + ' ' + c.noun + '…'));
@@ -3417,12 +3417,14 @@ function show(id) {
   gs.disabled = !cfg; resetBtn.disabled = !cfg;
   gs.value = cfg ? cfg.state.q : ''; gs.placeholder = cfg ? cfg.searchHint : 'Open a tab to search it';
   buildJump(el, id); moveInd(); requestAnimationFrame(moveInd);
-  if (!(id === 'mplan' && typeof MPATH !== 'undefined' && MPATH) && location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
+  if (id === 'mplan') { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } else if (location.hash !== '#' + (HR[id] || id)) history.replaceState(null, '', '#' + (HR[id] || id));
   window.scrollTo(0, 0);
 }
-addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== current) show(id); });
+const HM = { p1: 'sugg', p2: 'psugg', p3: 'ssugg' }, HR = { sugg: 'p1', psugg: 'p2', ssugg: 'p3' };
+addEventListener('hashchange', () => { const hh = location.hash.slice(1), id = HM[hh] || hh || 'mplan'; if (id !== current) show(id); });
+{ const w = document.querySelector('.who'); w.style.cursor = 'pointer'; w.setAttribute('role', 'link'); w.tabIndex = 0; w.title = 'Open the Master Plan'; w.addEventListener('click', () => show('mplan')); w.addEventListener('keydown', e => { if (e.key === 'Enter') show('mplan'); }); }
 const MPATH = /\/masterplan(\/|\/index\.html)?$/.test(location.pathname);
-show(location.hash.slice(1) || (MPATH ? 'mplan' : 'dash'));
+{ const hh = location.hash.slice(1); show(HM[hh] || hh || 'mplan'); }
 </script>
 </body>
 </html>
