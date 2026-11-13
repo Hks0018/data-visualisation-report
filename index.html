@@ -2423,7 +2423,9 @@ const timeBand = v => v == null ? '' : v <= 2 ? String(v) : v <= 5 ? '3 to 5' : 
 const barNum = (v, max, suffix) => v == null ? dash() : [h('span', { class: 'vbar' }, h('i', { style: 'width:' + Math.min(100, v / max * 100) + '%' })), fmt(v) + (suffix || '')];
 const sgn = v => v == null ? '' : (v > 0 ? '+' : '') + v;
 const prLabel = p => p ? '#' + p.n + ' ' + shortP(p.prompt, 60) : '';
-const lazyP = (cfg, key, mk) => { cfg.lazy = async () => { if (key === 'pg') await ensure('pmc'); if (key === 'ci') await ensure('pmp'); const d = await unpack(PM[key]); cfg.rows = mk(d); initView(cfg); cfg.ready = true; }; return cfg; };
+const BRANDS = [['Adani Power', /adani power|\bAPL\b/i, 'a'], ['Adani Green Energy', /adani green|\bAGEL\b/i, 'a'], ['Adani Ports and SEZ', /\bAPSEZ\b|adani ports|\bAPSE\b/i, 'a'], ['AdaniConneX', /adaniconnex/i, 'a'], ['Ambuja Cements', /ambuja/i, 'a'], ['ACC', /\bACC\b/, 'a'], ['Adani Enterprises', /adani enterprises|\bAEL\b/i, 'a'], ['Adani Defence & Aerospace', /adani defen[cs]e|adani aerospace/i, 'a'], ['Adani Total Gas', /adani total gas|\bATGL\b/i, 'a'], ['AWL Agri Business', /\bAWL\b|adani wilmar/i, 'a'], ['Adani Airport Holdings', /adani airport|\bAAHL\b/i, 'a'], ['Adani Energy Solutions', /adani energy solutions|\bAESL\b|adani transmission/i, 'a'], ['Adani New Industries', /\bANIL\b|adani new industries/i, 'a'], ['Adani Solar', /adani solar/i, 'a'], ['Adani Electricity', /adani electricity/i, 'a'], ['Adani Logistics', /adani logistics/i, 'a'], ['Adani Sportsline', /sportsline/i, 'a'], ['Adani Realty', /adani realty/i, 'a'], ['Penna Cement', /penna cement/i, 'a'], ['Sanghi Industries', /sanghi/i, 'a'], ['Orient Cement', /orient cement/i, 'a'], ['Adani Digital Labs', /adani digital/i, 'a'], ['Tata Group', /\btata/i, 'c'], ['Reliance', /\breliance\b|\bRIL\b/i, 'c'], ['Larsen & Toubro', /larsen|\bL&T\b|\bL & T\b/i, 'c'], ['JSW', /\bjsw\b/i, 'c'], ['Vedanta', /\bvedanta\b/i, 'c'], ['UltraTech Cement', /ultratech|ultratec/i, 'c'], ['Aditya Birla', /\bbirla\b|hindalco/i, 'c'], ['NTPC', /\bNTPC\b/, 'c'], ['TotalEnergies', /totalenergies/i, 'c'], ['GMR', /\bGMR\b/, 'c'], ['Suzlon', /\bsuzlon\b/i, 'c'], ['Waaree', /\bwaaree\b/i, 'c'], ['ReNew', /\brenew\b(?! sys)/, 'c'], ['RenewSys', /renewsys/i, 'c'], ['Avaada', /\bavaada\b/i, 'c'], ['Emmvee', /\bemmvee\b/i, 'c'], ['Greenko', /\bgreenko\b/i, 'c'], ['Inox', /\binox\b/i, 'c'], ['Mahindra', /\bmahindra\b/i, 'c'], ['Rayzon Solar', /\brayzon\b/i, 'c'], ['Siemens', /\bsiemens\b/i, 'c'], ['Vestas', /\bvestas\b/i, 'c'], ['GE Vernova', /vernova/i, 'c'], ['Sify', /\bsify\b/i, 'c'], ['Jindal', /\bjindal\b/i, 'c'], ['Airtel / Nxtra', /\bairtel\b|\bnxtra\b/i, 'c'], ['Jio', /\bjio\b/i, 'c'], ['Equinix', /\bequinix\b/i, 'c'], ['NTT', /\bNTT\b/, 'c'], ['Yotta', /\byotta\b/i, 'c'], ['Elbit Systems', /\belbit\b/i, 'c'], ['CtrlS', /\bctrls\b/i, 'c'], ['CapitaLand', /capitaland/i, 'c'], ['Dalmia', /\bdalmia\b/i, 'c'], ['Sterlite', /\bsterlite\b/i, 'c'], ['SJVN', /\bSJVN\b/, 'c'], ['NMDC', /\bNMDC\b/, 'c'], ['GAIL', /\bGAIL\b/, 'c'], ['IOCL', /\bIOCL\b|indian oil/i, 'c'], ['RVNL', /\bRVNL\b/, 'c'], ['Shapoorji Pallonji', /shapoorji|pallonji/i, 'c'], ['John Cockerill', /cockerill/i, 'c'], ['Premier Energies', /premier energies|\bpremier\b/i, 'c'], ['Vikram Solar', /vikram solar|\bvikram\b/i, 'c'], ['Goldi Solar', /\bgoldi\b/i, 'c'], ['Jakson', /\bjakson\b/i, 'c'], ['ACME', /\bACME\b/, 'c'], ['Envision', /\benvision\b/i, 'c'], ['Microsoft Azure', /\bazure\b|microsoft/i, 'c'], ['Torrent Power', /torrent power/i, 'c'], ['CESC', /\bCESC\b/, 'c'], ['Power Grid', /power grid|\bPGCIL\b/i, 'c'], ['Coal India', /coal india|\bCIL\b/i, 'c'], ['BHEL', /\bBHEL\b/, 'c'], ['NHPC', /\bNHPC\b/, 'c'], ['ONGC', /\bONGC\b/, 'c'], ['Tesla', /\btesla\b/i, 'c'], ['Amazon / AWS', /\bamazon\b|\bAWS\b/, 'c'], ['Boeing', /\bboeing\b/i, 'c']];
+let PRCC = new Map();   /* prompt number -> the competitors whose pages the answers cite */
+const lazyP = (cfg, key, mk) => { cfg.lazy = async () => { if (key === 'pg') await ensure('pmc'); if (key === 'ci') await ensure('pmp'); if (key === 'pr') { const ci = await unpack(PM.ci); PRCC = new Map(); ci.rows.forEach(a => { const o = a[11] < 0 ? '' : ci.d.of[a[11]]; if (o && o !== 'Brand') { let st = PRCC.get(a[0]); if (!st) PRCC.set(a[0], st = new Set()); st.add(o); } }); } const d = await unpack(PM[key]); cfg.rows = mk(d); initView(cfg); cfg.ready = true; }; return cfg; };
 const sTag = t => t ? stag(t) : dash();
 const PM_NUMS = Array.from({ length: PM.n.pr }, (_, i) => String(i + 1));
 
@@ -2456,6 +2458,8 @@ VIEWS.pmp = lazyP({
     { type: 'bool', key: 'unf', label: 'Unfavourable mentions', test: r => r.unf > 0 },
     { type: 'bool', key: 'aunf', label: 'Unfavourable answers', test: r => r.aunf > 0 },
     { type: 'bool', key: 'hasas', label: 'Answer score', test: r => r.as != null },
+    { type: 'bool', key: 'hascomp', label: 'Competitor pages cited', test: r => r.cc > 0 },
+    { type: 'bool', key: 'compnotus', label: 'Competitor pages cited, no brand mention', test: r => r.cc > 0 && !(r.bm > 0) },
   ],
   columns: [
     { key: 'row', label: '#', cls: 'rn', cell: r => r.n, sort: 'row' },
@@ -2504,15 +2508,31 @@ VIEWS.pmp = lazyP({
       } },
   ],
   detail: r => {
-    const as = (VIEWS.pmp.ansBy.get(r.n) || []), cit = h('div');
+    const as = (VIEWS.pmp.ansBy.get(r.n) || []), cit = h('div'), brands = h('div');
+    /* Brands named, by provider. The data has no full list of the brands in an answer, so each one is picked out of the answer snippet from a list of the company names that appear across the snippets, and from the competitor pages the provider cited. */
+    const CITED = { 'Reliance Industries': 'Reliance', 'JSW Group': 'JSW', 'Vedanta Group': 'Vedanta' };
+    const paintBrands = cs => {
+      if (!as.length) { brands.replaceChildren(h('div', { class: 'dim' }, 'No answers for this prompt.')); return; }
+      brands.replaceChildren(...as.map(a => {
+        const mine = cs.filter(c => c.prov === a.prov), bmN = mine.reduce((m, c) => Math.max(m, c.bm || 0), 0), adani = bmN > 0 || /adani/i.test(a.ex || ''), grp = [], oth = new Map();
+        BRANDS.forEach(([n, re, k]) => { if (re.test(a.ex || '')) { if (k === 'a') grp.push(n); else oth.set(n, new Set(['named in the answer'])); } });
+        mine.forEach(c => { if (c.of && c.of !== 'Brand') { const n = CITED[c.of] || c.of; if (!oth.has(n)) oth.set(n, new Set()); oth.get(n).add('page cited'); } });
+        const chips = [adani ? h('span', { class: 'tag bhi', title: 'Our brand' }, 'Adani' + (bmN ? ' · ' + bmN + (bmN === 1 ? ' mention' : ' mentions') : '')) : h('span', { class: 'tag tn dim' }, 'Adani not named'), ...grp.map(n => h('span', { class: 'tag bhi', title: 'Adani group company named in the answer' }, n)), ...[...oth].map(([n, why]) => h('span', { class: 'tag tn', title: [...why].join(', ') }, n + (why.has('named in the answer') ? '' : ' · page cited')))];
+        return h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, h('span', { class: 'strong' }, a.prov), h('span', { class: 'note' }, fmt(grp.length + oth.size + (adani ? 1 : 0)) + ' brands')),
+          h('div', { class: 'tags', style: 'margin-top:6px' }, chips));
+      }));
+    };
+    paintBrands([]);
     ensure('pmc').then(() => {
-      const cs = VIEWS.pmc.rows.filter(c => c.pn === r.n), doms = countVals(cs.filter(c => c.dom), c => c.dom).slice(0, 10);
+      const cs = VIEWS.pmc.rows.filter(c => c.pn === r.n); paintBrands(cs);
+      const doms = countVals(cs.filter(c => c.dom), c => c.dom).slice(0, 10);
       cit.replaceChildren(...(cs.length ? [sec('Citations (' + fmt(cs.length) + ')'), doms.length ? h('div', { class: 'tags' }, doms.map(([d, n]) => h('span', { class: 'tag tn' }, d + ' · ' + n))) : null, h('button', { class: 'btn primary', style: 'margin-top:10px', onclick: () => jump('pmc', c => pickMulti(c, 'prm', String(r.n))) }, 'Show these ' + fmt(cs.length) + ' citations', icon('right'))] : [h('div', { class: 'dim' }, 'No citations for this prompt.')]));
     });
     return [
       h('div', { class: 'bubble me' }, r.prompt),
       dl([['#', mono(r.n)], ['Intent', r.intent], ['Brand coverage %', r.cov == null ? '' : r.cov + '%'], ['Brand sentiment (avg)', sgn(r.avg)], ['Favourable', r.fav], ['Neutral', r.neu], ['Unfavourable', r.unf], ['Brand mentions', r.bm], ['Total mentions', r.tm], ['Answer score (0-100)', r.as], ['Answer sentiment (avg)', sgn(r.aavg)], ['Answers Favourable', r.afav], ['Answers Neutral', r.aneu], ['Answers Unfavourable', r.aunf], ['Scored answers', r.scored]]),
       mixBar(r.fav || 0, r.neu || 0, r.unf || 0),
+      sec('Brands named, by provider'), h('div', { class: 'note', style: 'margin-bottom:6px' }, 'Every brand found in each provider’s answer snippet, plus competitor pages it cited. Green is Adani and its group companies. A snippet is short and the data holds no full answer, so a brand outside the snippet or not on the list of names found across your answers is not shown.'), brands,
       sec('Answers by provider (' + as.length + ')'),
       as.length ? h('div', null, as.map(a => h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px' }, h('span', { class: 'strong' }, a.prov), sTag(a.sent), h('span', { class: 'note' }, 'Score ' + sgn(a.score))), a.ex ? h('div', { class: 'note', style: 'overflow-wrap:anywhere' }, a.ex) : null))) : h('div', { class: 'dim' }, 'No scored answers for this prompt.'),
       cit];
@@ -2520,7 +2540,7 @@ VIEWS.pmp = lazyP({
 }, 'pr', d => {
   const D = d.d, V = VIEWS.pmp; V.prov = d.prov; V.ansBy = new Map();
   d.ans.forEach(a => { let l = V.ansBy.get(a[0]); if (!l) V.ansBy.set(a[0], l = []); l.push({ prov: D.prov[a[1]], sent: L(D.sent, a[2]), score: a[3], ex: a[4] }); });
-  return d.rows.map(a => ({ r: a[0], n: a[0], prompt: a[1], cov: a[2], avg: a[3], fav: a[4], neu: a[5], unf: a[6], bm: a[7], tm: a[8], as: a[9], aavg: a[10], afav: a[11], aneu: a[12], aunf: a[13], scored: a[14], intent: L(D.intent, a[15]) }));
+  return d.rows.map(a => ({ r: a[0], n: a[0], prompt: a[1], cov: a[2], avg: a[3], fav: a[4], neu: a[5], unf: a[6], bm: a[7], tm: a[8], as: a[9], aavg: a[10], afav: a[11], aneu: a[12], aunf: a[13], scored: a[14], intent: L(D.intent, a[15]), cc: PRCC.has(a[0]) ? PRCC.get(a[0]).size : 0, comp: PRCC.has(a[0]) ? [...PRCC.get(a[0])].join(', ') : '' }));
 });
 
 /* --- Citations --- */
@@ -2729,9 +2749,9 @@ function buildPSugg() {
   const R8 = N * 8, tmN = sumOf(P, r => r.tm), favN = sumOf(P, r => r.fav), neuN = sumOf(P, r => r.neu), scN = favN + neuN + unfN, GP = 0.1, q1 = x => (x * 100).toFixed(1) + '%';
   const vis = bmN / R8, sov = bmN / tmN, fs = favN / scN, vis2 = Math.min(1, vis * (1 + GP)), bm2 = Math.round(bmN * (1 + GP)), sov2 = Math.min(1, sov * (1 + GP)), fs2 = Math.min(1, fs * (1 + GP));
   const needVis = Math.round(R8 * vis2 - bmN), needSov = Math.round((sov2 * tmN - bmN) / (1 - sov2)), needFav = Math.round(fs2 * scN - favN);
-  const GL = dsec('A', 'The 10% goal', 'Four numbers to lift by 10% each. A 10% lift is 10% of today’s value, so ' + q1(vis) + ' becomes ' + q1(vis2) + ', not ' + q1(vis + 0.1) + '.', [
+  const GL = dsec('A', 'The 10% goal', 'Four numbers to lift. The AI visibility score goes from ' + q1(vis) + ' to 71.3%, and the other three rise by 10% of today’s value.', [
     kpis([
-      { l: 'AI visibility score', v: (vis2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(vis) + '. About ' + fmt(needVis) + ' more of the ' + fmt(R8) + ' responses would name the brand' },
+      { l: 'AI visibility score', v: '71.3', unit: '% target', s: 'Today ' + q1(vis) + '. About ' + fmt(needVis) + ' more of the ' + fmt(R8) + ' responses would name the brand' },
       { l: 'AI brand mentions', v: fmt(bm2), unit: 'target', s: 'Today ' + fmt(bmN) + ', so ' + fmt(bm2 - bmN) + ' more. These are the same responses that make up the visibility score' },
       { l: 'Share of voice', v: (sov2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(sov) + '. About ' + fmt(needSov) + ' more brand mentions, with competitors unchanged' },
       { l: 'Favourable sentiment', v: (fs2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(fs) + '. About ' + fmt(needFav) + ' of the ' + fmt(neuN + unfN) + ' Neutral or Unfavourable mentions would need to turn Favourable' }]),
