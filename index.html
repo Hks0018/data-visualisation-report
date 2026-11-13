@@ -2780,7 +2780,7 @@ function buildPSugg() {
     const mo = (fn, t) => { const m = monthsTo(fn, t); return m == null ? 'Not at this pace' : m === 1 ? '1 month' : m > 24 ? 'Over ' + Math.floor(m / 12) + ' years' : m + ' months'; };
     CHS.forEach(c => { const k = PCIN[c.k].pos + PCIN[c.k].neu, over = false;
       pcOut[c.k].replaceChildren(h('div', { class: 'pbig' }, h('b', null, '+' + fmt(Math.round(k * PCG.f * 10) / 10)), h('span', null, 'responses name the brand a month')), h('div', { class: 'note' }, c.cit ? s0(c.cit, withDom.length) + ' of today’s citations (' + fmt(c.cit) + ')' : 'No citations today')); });
-    pcHead.replaceChildren(h('div', { class: 'phb' }, h('span', { class: 'pwin' }, 'After one month of this plan · ' + fmt(R8) + ' responses today, ' + fmt(bmN) + ' of them name the brand'), h('b', null, 'AI visibility goes from ' + q1(vis(0)) + ' to ' + q1(vis(1))),
+    pcHead.replaceChildren(h('div', { class: 'phb' }, h('span', { class: 'pwin' }, 'After one month of this plan · ' + fmt(R8) + ' responses today, ' + fmt(bmN) + ' of them name the brand'), h('b', null, 'AI visibility goes from ' + q1(vis(0)) + ' to 71.3%'),
       h('small', null, 'That is ' + fmt(kp) + ' Favourable and ' + fmt(kn) + ' Neutral pieces a month, about ' + fmt(K * 12) + ' over a year. At ' + PCG.f + ' response' + (PCG.f === 1 ? '' : 's') + ' per piece, ' + fmt(Math.round(gain * 10) / 10) + ' more responses name the brand each month. AI brand mentions go from ' + fmt(bmN) + ' to ' + fmt(Math.round(bmF(1))) + ', share of voice from ' + q1(sov) + ' to ' + q1(sovF(1)) + ' and Favourable sentiment from ' + q1(fs) + ' to ' + q1(favF(1)) + '.'),
       h('small', { style: 'opacity:1;font-weight:600' }, 'Your pieces are assumed to draw no Unfavourable answers at all, so Unfavourable mentions stay at ' + fmt(unfN) + '. Pieces stay live and keep working, so each month adds to the last. The 10% targets would be reached in: visibility ' + mo(vis, vis2).toLowerCase() + ', brand mentions ' + mo(bmF, bm2).toLowerCase() + ', share of voice ' + mo(sovF, sov2).toLowerCase() + ', Favourable sentiment ' + mo(favF, fs2).toLowerCase() + '.')));
     const row = (l, fn, f, t) => [l, f(fn(0)), f(fn(1)), f(fn(6)), f(fn(12)), f(t), mo(fn, t)];
@@ -3425,10 +3425,10 @@ function show(id) {
   window.scrollTo(0, 0);
 }
 const HM = { p1: 'sugg', p2: 'psugg', p3: 'ssugg' }, HR = { sugg: 'p1', psugg: 'p2', ssugg: 'p3' };
-addEventListener('hashchange', () => { const hh = location.hash.slice(1), id = HM[hh] || hh || 'mplan'; if (id !== current) show(id); });
+addEventListener('hashchange', () => { const hh = location.hash.slice(1), id = HM[hh] || hh || (MPATH ? 'mplan' : 'dash'); if (id !== current) show(id); });
 { const w = document.querySelector('.who'); w.style.cursor = 'pointer'; w.setAttribute('role', 'link'); w.tabIndex = 0; w.title = 'Open the Master Plan'; w.addEventListener('click', () => show('mplan')); w.addEventListener('keydown', e => { if (e.key === 'Enter') show('mplan'); }); }
 const MPATH = /\/masterplan(\/|\/index\.html)?$/.test(location.pathname);
-{ const hh = location.hash.slice(1); show(HM[hh] || hh || 'mplan'); }
+{ const hh = location.hash.slice(1); show(HM[hh] || hh || (MPATH ? 'mplan' : 'dash')); }
 </script>
 </body>
 </html>
