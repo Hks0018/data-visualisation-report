@@ -731,6 +731,7 @@ tbody tr.tot .note{font-weight:400}
 .bm .hb.wl .hbr{grid-template-columns:minmax(120px,42%) minmax(0,1fr) auto;align-items:center}.bm .hb.wl .hbl{white-space:normal;overflow:visible}.bm .hb.wl .hbl small{white-space:normal;line-height:1.3}.bm .hb.wl .hbtx{white-space:normal;-webkit-line-clamp:3}
 .bm .capcall{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.5;color:var(--fg-2)}.bm .capcall b{font:600 17px var(--font-head);color:var(--fg)}.bm .capcall.neg{background:rgba(180,22,22,.08)}.bm .capcall.neg b{color:#B41616}
 .bm .charts>.card{min-width:0;overflow-wrap:anywhere}
+.bred{background:rgba(180,22,22,.12);color:#8F1313;font-weight:600;box-shadow:inset 0 -1px 0 rgba(180,22,22,.3)}
 </style>
 
 </head>
@@ -2403,6 +2404,7 @@ VIEWS.sugg = { custom: true, lazy: async () => { await loadMen(); VIEWS.sugg.rea
 
 /* ---------- Prompts tab: Prompts, Citations, Sources, Pages ---------- */
 const PM = DATA.pm;
+const PM_PRES = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,127,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,254,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255];   /* bit i set: provider i has a response for the prompt (it has citation rows) */
 const FAVLBL = ['Favourable', 'Neutral', 'Unfavourable'];
 const SENT_BOOL = { Favourable: 'hasfav', Neutral: 'hasneu', Unfavourable: 'unf' };
 const SENT_DEF = { Favourable: 'Answers that name the brand and speak of it favourably: a score of +15 or higher on a scale of -100 to +100.', Neutral: 'Answers that name the brand without leaning either way: a score from -14 to +14.', Unfavourable: 'Answers that name the brand and speak of it unfavourably: a score of -15 or lower.' };
@@ -2482,9 +2484,9 @@ VIEWS.pmp = lazyP({
     { key: 'scored', label: 'Scored answers', num: true, sort: 'scored', cell: r => numCell(r.scored) }],
   statsFn: (f, all) => {
     const cv = f.map(r => r.cov).filter(v => v != null), sc = f.filter(r => r.avg != null), tm = sumOf(f, r => r.tm), bm = sumOf(f, r => r.bm), none = f.filter(r => r.cov === 0).length, srt = k => [...f].sort((a, b) => (b[k] || 0) - (a[k] || 0));
-    const as = f.filter(r => r.as != null);
+    const as = f.filter(r => r.as != null), rp = sumOf(f, r => { let m = PM_PRES[r.n - 1] || 0, k = 0; for (; m; m >>= 1) k += m & 1; return k; });
     return [
-      { l: 'Prompts', n: f.length, unit: 'prompts', s: 'of ' + fmt(all.length) + '. ' + fmt(f.length * 8) + ' responses across 8 AI providers (' + fmt(f.length) + ' prompts × 8). Line shows Brand coverage % per prompt', pill: share(f.length, all.length), spark: { v: srt('cov').map(r => r.cov || 0), l: srt('cov').map(prLabel) } },
+      { l: 'Prompts', n: f.length, unit: 'prompts', s: 'of ' + fmt(all.length) + '. ' + fmt(rp) + ' responses across 8 AI providers (' + fmt(f.length) + ' prompts × 8' + (rp < f.length * 8 ? ', less ' + fmt(f.length * 8 - rp) + ' with no response in the export' : '') + '). Line shows Brand coverage % per prompt', pill: share(f.length, all.length), spark: { v: srt('cov').map(r => r.cov || 0), l: srt('cov').map(prLabel) } },
       { l: 'Brand coverage %', n: Math.round(meanOf(cv)), unit: '% on average', s: 'The share of answered responses, across every tracked AI provider, that name the brand, averaged over the prompts shown. Line shows prompts per coverage band', spark: { v: COV_BANDS.map(b => f.filter(r => covBand(r.cov) === b).length), l: COV_BANDS } },
       { l: 'AI brand mentions', n: bm, unit: 'of ' + fmt(tm), s: 'Brand mentions out of Total mentions. Line shows mentions per prompt, most first', pill: { t: pct(bm, tm) + ' of mentions', up: null, act: c => { c.state.bool.hasbm = true; } }, spark: { v: srt('bm').map(r => r.bm || 0), l: srt('bm').map(prLabel) } },
       { l: 'Without a brand mention', n: none, unit: 'prompts', s: 'Prompts with a Brand coverage % of 0', pill: { t: pct(none, f.length) + ' of shown', up: null, act: c => { c.state.multi.band.add('0%'); } }, spark: { v: COV_BANDS.map(b => f.filter(r => covBand(r.cov) === b).length), l: COV_BANDS } },
@@ -2514,11 +2516,12 @@ VIEWS.pmp = lazyP({
     const paintBrands = cs => {
       if (!as.length) { brands.replaceChildren(h('div', { class: 'dim' }, 'No answers for this prompt.')); return; }
       brands.replaceChildren(...as.map(a => {
+        if (a.none) return h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, h('span', { class: 'strong' }, a.prov), h('span', { class: 'note' }, 'no response')), h('div', { class: 'tags', style: 'margin-top:6px' }, h('span', { class: 'tag tn dim' }, 'No response in the export')));
         const mine = cs.filter(c => c.prov === a.prov), bmN = mine.reduce((m, c) => Math.max(m, c.bm || 0), 0), adani = bmN > 0 || /adani/i.test(a.ex || ''), grp = [], oth = new Map();
         BRANDS.forEach(([n, re, k]) => { if (re.test(a.ex || '')) { if (k === 'a') grp.push(n); else oth.set(n, new Set(['named in the answer'])); } });
-        mine.forEach(c => { if (c.of && c.of !== 'Brand') { const n = CITED[c.of] || c.of; if (!oth.has(n)) oth.set(n, new Set()); oth.get(n).add('page cited'); } });
-        const chips = [adani ? h('span', { class: 'tag bhi', title: 'Our brand' }, 'Adani' + (bmN ? ' · ' + bmN + (bmN === 1 ? ' mention' : ' mentions') : '')) : h('span', { class: 'tag tn dim' }, 'Adani not named'), ...grp.map(n => h('span', { class: 'tag bhi', title: 'Adani group company named in the answer' }, n)), ...[...oth].map(([n, why]) => h('span', { class: 'tag tn', title: [...why].join(', ') }, n + (why.has('named in the answer') ? '' : ' · page cited')))];
-        return h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, h('span', { class: 'strong' }, a.prov), h('span', { class: 'note' }, fmt(grp.length + oth.size + (adani ? 1 : 0)) + ' brands')),
+        mine.forEach(c => { if (c.of && c.of !== 'Adani') { const n = CITED[c.of] || c.of; if (!oth.has(n)) oth.set(n, new Set()); oth.get(n).add('page cited'); } });
+        const chips = [adani ? h('span', { class: 'tag bhi', title: 'Our brand' }, 'Adani' + (bmN ? ' · ' + bmN + (bmN === 1 ? ' mention' : ' mentions') : '')) : h('span', { class: 'tag tn dim' }, 'Adani not named'), ...grp.map(n => h('span', { class: 'tag bhi', title: 'Adani group company named in the answer' }, n)), ...[...oth].map(([n, why]) => h('span', { class: 'tag bred', title: [...why].join(', ') }, n + (why.has('named in the answer') ? '' : ' · page cited')))];
+        return h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px;flex-wrap:wrap' }, h('span', { class: 'strong' }, a.prov), h('span', { class: 'note' }, fmt(grp.length + oth.size + (adani ? 1 : 0)) + (grp.length + oth.size + (adani ? 1 : 0) === 1 ? ' brand' : ' brands'))),
           h('div', { class: 'tags', style: 'margin-top:6px' }, chips));
       }));
     };
@@ -2532,14 +2535,15 @@ VIEWS.pmp = lazyP({
       h('div', { class: 'bubble me' }, r.prompt),
       dl([['#', mono(r.n)], ['Intent', r.intent], ['Brand coverage %', r.cov == null ? '' : r.cov + '%'], ['Brand sentiment (avg)', sgn(r.avg)], ['Favourable', r.fav], ['Neutral', r.neu], ['Unfavourable', r.unf], ['Brand mentions', r.bm], ['Total mentions', r.tm], ['Answer score (0-100)', r.as], ['Answer sentiment (avg)', sgn(r.aavg)], ['Answers Favourable', r.afav], ['Answers Neutral', r.aneu], ['Answers Unfavourable', r.aunf], ['Scored answers', r.scored]]),
       mixBar(r.fav || 0, r.neu || 0, r.unf || 0),
-      sec('Brands named, by provider'), h('div', { class: 'note', style: 'margin-bottom:6px' }, 'Every brand found in each provider’s answer snippet, plus competitor pages it cited. Green is Adani and its group companies. A snippet is short and the data holds no full answer, so a brand outside the snippet or not on the list of names found across your answers is not shown.'), brands,
+      sec('Brands named, by provider'), h('div', { class: 'note', style: 'margin-bottom:6px' }, 'Every brand found in each provider’s answer snippet, plus competitor pages it cited. Green is Adani and its group companies. Red is every other brand, the competition. A snippet is short and the data holds no full answer, so a brand outside the snippet or not on the list of names found across your answers is not shown.'), brands,
       sec('Answers by provider (' + as.length + ')'),
-      as.length ? h('div', null, as.map(a => h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px' }, h('span', { class: 'strong' }, a.prov), sTag(a.sent), h('span', { class: 'note' }, 'Score ' + sgn(a.score))), a.ex ? h('div', { class: 'note', style: 'overflow-wrap:anywhere' }, a.ex) : null))) : h('div', { class: 'dim' }, 'No scored answers for this prompt.'),
+      as.length ? h('div', null, as.map(a => h('div', { class: 'mitem' }, h('div', { class: 'frow', style: 'gap:8px' }, h('span', { class: 'strong' }, a.prov), ...(a.sent ? [sTag(a.sent), h('span', { class: 'note' }, 'Score ' + sgn(a.score))] : a.none ? [h('span', { class: 'tag tn dim' }, 'No response in the export')] : [h('span', { class: 'tag tn dim' }, 'Adani not named'), h('span', { class: 'note' }, 'No score')])), a.ex ? h('div', { class: 'note', style: 'overflow-wrap:anywhere' }, a.ex) : null))) : h('div', { class: 'dim' }, 'No scored answers for this prompt.'),
       cit];
   },
 }, 'pr', d => {
   const D = d.d, V = VIEWS.pmp; V.prov = d.prov; V.ansBy = new Map();
   d.ans.forEach(a => { let l = V.ansBy.get(a[0]); if (!l) V.ansBy.set(a[0], l = []); l.push({ prov: D.prov[a[1]], sent: L(D.sent, a[2]), score: a[3], ex: a[4] }); });
+  PM_PRES.forEach((m, i) => { let l = V.ansBy.get(i + 1); if (!l) V.ansBy.set(i + 1, l = []); const have = new Set(l.map(x => x.prov)); D.prov.forEach((p, k) => { if (!have.has(p)) l.push({ prov: p, sent: '', none: !((m >> k) & 1), score: null, ex: '' }); }); l.sort((x, y) => D.prov.indexOf(x.prov) - D.prov.indexOf(y.prov)); });
   return d.rows.map(a => ({ r: a[0], n: a[0], prompt: a[1], cov: a[2], avg: a[3], fav: a[4], neu: a[5], unf: a[6], bm: a[7], tm: a[8], as: a[9], aavg: a[10], afav: a[11], aneu: a[12], aunf: a[13], scored: a[14], intent: L(D.intent, a[15]), cc: PRCC.has(a[0]) ? PRCC.get(a[0]).size : 0, comp: PRCC.has(a[0]) ? [...PRCC.get(a[0])].join(', ') : '' }));
 });
 
@@ -2581,13 +2585,13 @@ VIEWS.pmc = lazyP({
     { key: 'wt', label: 'Website type', cell: r => r.wt || dash() },
     { key: 'of', label: 'Cited page of', cell: r => r.of ? h('span', { class: 'tag t1' }, r.of) : dash() }],
   statsFn: (f, all) => {
-    const byProv = countVals(f, r => r.prov), byDom = countVals(f.filter(r => r.dom), r => r.dom), byPrm = countVals(f, r => r.pn), brandPg = f.filter(r => r.of === 'Brand').length, yes = f.filter(r => r.yes === 'Yes').length;
+    const byProv = countVals(f, r => r.prov), byDom = countVals(f.filter(r => r.dom), r => r.dom), byPrm = countVals(f, r => r.pn), brandPg = f.filter(r => r.of === 'Adani').length, yes = f.filter(r => r.yes === 'Yes').length;
     const psN = k => f.filter(r => r.psent === k).length, psRead = psN('Positive') + psN('Neutral') + psN('Negative');
     return [
       { l: 'Citations', n: f.length, unit: 'citations', s: 'of ' + fmt(all.length) + '. Line shows citations per Provider', pill: share(f.length, all.length), spark: { v: byProv.map(x => x[1]), l: byProv.map(x => x[0]) } },
       { l: 'Prompts', n: byPrm.length, unit: 'prompts', s: 'Line shows citations per prompt, largest first', spark: { v: byPrm.slice(0, 24).map(x => x[1]), l: byPrm.slice(0, 24).map(x => '#' + x[0]) } },
       { l: 'Domains', n: byDom.length, unit: 'domains', s: 'Line shows the 16 most cited', spark: { v: byDom.slice(0, 16).map(x => x[1]), l: byDom.slice(0, 16).map(x => x[0]) } },
-      { l: 'Cited page of Brand', n: brandPg, unit: 'citations', s: 'Citations to a page of the Brand', pill: { t: pct(brandPg, f.length) + ' of shown', up: null, act: c => { c.state.multi.of.add('Brand'); } }, spark: { v: byProv.map(x => f.filter(r => r.prov === x[0] && r.of === 'Brand').length), l: byProv.map(x => x[0]) } },
+      { l: 'Cited page of Adani', n: brandPg, unit: 'citations', s: 'Citations to a page of Adani', pill: { t: pct(brandPg, f.length) + ' of shown', up: null, act: c => { c.state.multi.of.add('Adani'); } }, spark: { v: byProv.map(x => f.filter(r => r.prov === x[0] && r.of === 'Adani').length), l: byProv.map(x => x[0]) } },
       { l: 'Brand mentioned', n: yes, unit: 'citations', s: 'Citations from answers that mention the Brand', pill: { t: pct(yes, f.length) + ' of shown', up: null, act: c => { c.state.multi.yes.add('Yes'); } }, spark: { v: byProv.map(x => f.filter(r => r.prov === x[0] && r.yes === 'Yes').length), l: byProv.map(x => x[0]) } },
       { l: 'Pages read for sentiment', n: psRead, unit: 'citations', s: 'Citations whose page was read for how it talks about the brand: ' + fmt(psN('Positive')) + ' Positive, ' + fmt(psN('Neutral')) + ' Neutral, ' + fmt(psN('Negative')) + ' Negative. Line shows citations per Page sentiment', pill: { t: pct(psRead, f.length) + ' of shown', up: null, act: c => { ['Positive', 'Neutral', 'Negative'].forEach(k => c.state.multi.psent.add(k)); } }, spark: { v: PS_ORDER.map(k => f.filter(r => (r.psent || 'Not checked') === k).length), l: PS_ORDER } }];
   },
@@ -2610,7 +2614,7 @@ VIEWS.pmc = lazyP({
   ],
 }, 'ci', d => {
   const D = d.d; PMCD = D;
-  return d.rows.map((a, i) => ({ r: i + 1, pn: a[0], prompt: D.pt[a[0] - 1] || '', pcov: D.pc[a[0] - 1], prov: L(D.prov, a[1]), yes: a[2] ? 'Yes' : 'No', bm: a[3], fav: L(D.sent, a[4]), score: a[5], cite: L(D.cite, a[6]), url: L(D.url, a[7]), psent: a[7] < 0 ? '' : L(D.psd, D.pst[a[7]]), pscore: a[7] < 0 ? null : D.psc[a[7]], pub: L(D.pub, a[8]), dom: L(D.dom, a[9]), wt: L(D.wt, a[10]), of: L(D.of, a[11]) }));
+  return d.rows.map((a, i) => ({ r: i + 1, pn: a[0], prompt: D.pt[a[0] - 1] || '', pcov: D.pc[a[0] - 1], prov: L(D.prov, a[1]), yes: a[2] ? 'Yes' : 'No', bm: a[3], fav: L(D.sent, a[4]), score: a[5], cite: L(D.cite, a[6]), url: L(D.url, a[7]), psent: a[7] < 0 ? '' : L(D.psd, D.pst[a[7]]), pscore: a[7] < 0 ? null : D.psc[a[7]], pub: L(D.pub, a[8]), dom: L(D.dom, a[9]), wt: L(D.wt, a[10]), of: (o => o === 'Brand' ? 'Adani' : o)(L(D.of, a[11])) }));
 });
 let PMCD = null;
 
@@ -2746,7 +2750,7 @@ function buildPSugg() {
   const worst = [...unfP].sort((a, b) => b.unf - a.unf).slice(0, 8);
 
   /* goal: lift four numbers by 10% */
-  const R8 = N * 8, tmN = sumOf(P, r => r.tm), favN = sumOf(P, r => r.fav), neuN = sumOf(P, r => r.neu), scN = favN + neuN + unfN, GP = 0.1, q1 = x => (x * 100).toFixed(1) + '%';
+  const R8 = PM_PRES.reduce((s, m) => { for (; m; m >>= 1) s += m & 1; return s; }, 0), tmN = sumOf(P, r => r.tm), favN = sumOf(P, r => r.fav), neuN = sumOf(P, r => r.neu), scN = favN + neuN + unfN, GP = 0.1, q1 = x => (x * 100).toFixed(1) + '%';
   const vis = bmN / R8, sov = bmN / tmN, fs = favN / scN, vis2 = Math.min(1, vis * (1 + GP)), bm2 = Math.round(bmN * (1 + GP)), sov2 = Math.min(1, sov * (1 + GP)), fs2 = Math.min(1, fs * (1 + GP));
   const needVis = Math.round(R8 * vis2 - bmN), needSov = Math.round((sov2 * tmN - bmN) / (1 - sov2)), needFav = Math.round(fs2 * scN - favN);
   const GL = dsec('A', 'The 10% goal', 'Four numbers to lift. The AI visibility score goes from ' + q1(vis) + ' to 71.3%, and the other three rise by 10% of today’s value.', [
@@ -2755,7 +2759,7 @@ function buildPSugg() {
       { l: 'AI brand mentions', v: fmt(bm2), unit: 'target', s: 'Today ' + fmt(bmN) + ', so ' + fmt(bm2 - bmN) + ' more. These are the same responses that make up the visibility score' },
       { l: 'Share of voice', v: (sov2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(sov) + '. About ' + fmt(needSov) + ' more brand mentions, with competitors unchanged' },
       { l: 'Favourable sentiment', v: (fs2 * 100).toFixed(1), unit: '% target', s: 'Today ' + q1(fs) + '. About ' + fmt(needFav) + ' of the ' + fmt(neuN + unfN) + ' Neutral or Unfavourable mentions would need to turn Favourable' }]),
-    tcard('How each number is worked out', 'Read from the ' + fmt(N) + ' prompts, each answered by 8 AI providers (' + fmt(R8) + ' responses). The target is today’s value plus 10%. The last column says which levers below move it.',
+    tcard('How each number is worked out', 'Read from the ' + fmt(N) + ' prompts, answered by 8 AI providers (' + fmt(R8) + ' responses' + (R8 < N * 8 ? ', ' + fmt(N * 8 - R8) + ' fewer than ' + fmt(N) + ' × 8 because the export has no response for them' : '') + '). The target is today’s value plus 10%. The last column says which levers below move it.',
       dtab(['Metric', 'How it is worked out', 'Today', 'Target (+10%)', 'What it takes', 'Levers'], [
         ['AI visibility score', 'Responses that name the brand ÷ all responses. The same as Brand coverage %.', q1(vis), q1(vis2), fmt(needVis) + ' more responses name the brand', '1, 2, 3, 5, 6'],
         ['AI brand mentions', 'Responses that name the brand. Each prompt has up to 8.', fmt(bmN), fmt(bm2), fmt(bm2 - bmN) + ' more', '1, 2, 3'],
