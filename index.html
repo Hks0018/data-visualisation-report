@@ -4413,5 +4413,186 @@ addEventListener('hashchange', () => { const hh = location.hash.slice(1), id = H
 const MPATH = /\/masterplan(\/|\/index\.html)?$/.test(location.pathname);
 { const hh = location.hash.slice(1); show(HM[hh] || hh || (MPATH ? 'mplan' : 'dash')); }
 </script>
+<script id="dl-module">
+/* ---------- Download the data ----------
+   Every table, bar list, ledger and stack bar gets a small download button (CSV). The big list tables download ALL the rows that match the current
+   filters and search, not just the page on screen. The "Download this tab" button saves every table and chart on the tab as one Excel workbook.
+   Nothing here changes the data: it reads what the page shows. */
+(function () {
+  'use strict';
+  if (window.__dl) return; window.__dl = 1;
+  const NS = 'http://www.w3.org/2000/svg';
+  const css = '.dl-has{position:relative}.dlic{position:absolute;top:10px;right:10px;width:30px;height:30px;padding:0;border-radius:8px;border:1px solid var(--line,#d8dde6);background:var(--card,#fff);color:var(--fg-2,#55627a);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.7;z-index:2;transition:opacity .15s,background .15s}.dlic:hover,.dlic:focus-visible{opacity:1;background:var(--accent-soft,#eaf2fb)}.dlic svg{width:16px;height:16px}.dl-has>.dlic+*{padding-right:38px}.dlic.busy{opacity:1;cursor:progress}.dlic.busy svg{animation:dlspin 1s linear infinite}@keyframes dlspin{to{transform:rotate(360deg)}}'
+    + '.dlfab{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:0;background:var(--accent,#05529c);color:var(--on-accent,#fff);font:600 13px var(--font,system-ui);cursor:pointer;box-shadow:0 6px 22px rgba(5,40,90,.28)}.dlfab:hover{filter:brightness(1.08)}.dlfab svg{width:16px;height:16px}.dlfab.busy{cursor:progress;opacity:.85}.dlfab[hidden]{display:none}'
+    + '.dltoast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:70;background:#0b1f3a;color:#fff;padding:9px 16px;border-radius:10px;font:500 13px var(--font,system-ui);box-shadow:0 8px 26px rgba(0,0,0,.3);max-width:90vw}'
+    + '@media(max-width:620px){.dlfab .dlt{display:none}.dlfab{padding:12px;right:12px;bottom:76px}.dlic{top:8px;right:8px}}'
+    + '.dlbtn svg{width:14px;height:14px;margin-right:6px;vertical-align:-2px}@media print{.dlic,.dlfab,.dlbtn{display:none!important}}';
+  const st = document.createElement('style'); st.textContent = css; document.head.append(st);
+
+  const icon = () => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', '2'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round'); s.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(NS, 'path'); p.setAttribute('d', 'M12 3v12m0 0l-5-5m5 5l5-5M4 20h16'); s.append(p); return s; };
+  let toastT; const toast = m => { document.querySelectorAll('.dltoast').forEach(x => x.remove()); const t = document.createElement('div'); t.className = 'dltoast'; t.setAttribute('role', 'status'); t.textContent = m; document.body.append(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 3500); };
+
+  /* ---- text helpers ---- */
+  const clean = s => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/\s+/g, ' ').trim();
+  const BLOCK = /^(DIV|P|LI|UL|OL|H[1-6]|TR|TABLE|SECTION|BR)$/;
+  const parts = (n, out, buf) => { n.childNodes.forEach(c => { if (c.nodeType === 3) buf.t += c.textContent; else if (c.nodeType === 1) { if (c.classList.contains('tags')) { flush(out, buf); const t = [...c.children].map(x => clean(x.textContent)).filter(Boolean).join('; '); if (t) out.push(t); } else if (BLOCK.test(c.tagName)) { flush(out, buf); parts(c, out, buf); flush(out, buf); } else { let t = c.textContent; const ti = c.getAttribute && c.getAttribute('title'); if (ti && /…$/.test(clean(t)) && ti.length > clean(t).length) t = ti; buf.t += t; } } }); };
+  const flush = (out, buf) => { const t = clean(buf.t); if (t) out.push(t); buf.t = ''; };
+  const nodeText = n => {
+    if (n == null || n === false) return '';
+    if (typeof n === 'string' || typeof n === 'number') return clean(n);
+    if (Array.isArray(n)) return clean(n.map(nodeText).join(' '));
+    if (n.nodeType !== 1) return clean(n.textContent);
+    const out = [], buf = { t: '' }; parts(n, out, buf); flush(out, buf);
+    let r = out.join(' · '); const ti = n.getAttribute && n.getAttribute('title'); if (ti && /…$/.test(r) && ti.length > r.length) r = clean(ti); return r;
+  };
+  const blank = s => (s === '–' || s === '—' || s === '-' ? '' : s);
+  const slug = s => String(s || 'data').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'data';
+  const today = () => new Date().toISOString().slice(0, 10);
+  const site = () => slug(clean(document.title || 'dashboard').split(' ')[0]);
+  const num = s => { const t = String(s).trim(); if (/^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(t)) return t.replace(/,/g, '').replace(/^\+/, ''); if (/^\+\d+(\.\d+)?$/.test(t)) return t.slice(1); return t; };
+
+  /* ---- CSV ---- */
+  const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+([.,]\d+)*%?$/.test(s)) s = "'" + s; return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const toCsv = blocks => blocks.map(b => (blocks.length > 1 ? [cell(b.title), ''].join(',') + '\r\n' : '') + [b.head, ...b.rows].map(r => r.map(c => cell(num(c))).join(',')).join('\r\n')).join('\r\n\r\n') + '\r\n';
+  const save = (name, blob) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); };
+  const saveCsv = (name, blocks) => save(name + '.csv', new Blob(['﻿' + toCsv(blocks)], { type: 'text/csv;charset=utf-8' }));
+
+  /* ---- what a card holds ---- */
+  const titleOf = c => { const t = c.querySelector('h2,h3'); return clean(t ? t.textContent : '') || clean(c.getAttribute('aria-label')) || 'Data'; };
+  const ownCard = (el, card) => el.closest('section.card, .card.chart') === card && !el.closest('.rsp, .rsp-body, .rsp-src, .longtext');   /* a table inside an AI answer is part of the answer, not a data table of the page */
+  const headingFor = (el, card) => { let n = el; while (n && n !== card) { let p = n.previousElementSibling; while (p) { if (/^H[2-3]$/.test(p.tagName)) return clean(p.textContent); const h = p.querySelector && p.querySelector(':scope > h2, :scope > h3'); if (h) return clean(h.textContent); p = p.previousElementSibling; } n = n.parentElement; } return ''; };
+  const tableBlock = (t, title) => {
+    const head = [...t.querySelectorAll('thead th')].map(x => { const c = x.cloneNode(true); c.querySelectorAll('svg, s, .orig').forEach(e => e.remove()); return clean(c.textContent).replace(/ [▲▼]$/, ''); });
+    const trs = [...t.querySelectorAll('tbody tr')].filter(r => r.querySelector('td')); if (!trs.length) return null;
+    const rows = trs.map(r => [...r.children].map(td => blank(nodeText(td)))); const hd = head.length ? head : rows[0].map((_, i) => 'Column ' + (i + 1));
+    const linkCols = hd.map((_, i) => trs.some(r => { const a = r.children[i] && r.children[i].querySelector('a[href^="http"]'); return a && a.href !== clean(a.textContent) && a.href.replace(/^https?:\/\/(www\.)?/, '') !== clean(a.textContent).replace(/^https?:\/\/(www\.)?/, ''); }));
+    linkCols.forEach((has, i) => { if (!has) return; hd.push(hd[i] + ' (link)'); trs.forEach((r, k) => { const a = r.children[i] && r.children[i].querySelector('a[href^="http"]'); rows[k].push(a ? a.href : ''); }); });
+    return { title, head: hd, rows };
+  };
+  const blocksOf = card => {
+    const out = [], ct = titleOf(card);
+    const tb = [...card.querySelectorAll('table')].filter(t => ownCard(t, card)), grouped = tb.filter(t => t.closest('details')), sig = t => [...t.querySelectorAll('thead th')].map(x => clean(x.textContent)).join('|');
+    if (grouped.length > 2 && new Set(grouped.map(sig)).size === 1) {   /* one table for each collapsible group (a category, a provider...): save them as one table with the group name in the first column */
+      let head = null; const rows = []; grouped.forEach(t => { const b = tableBlock(t, ct); if (!b) return; const sm = t.closest('details').querySelector(':scope > summary'), g = sm ? clean((sm.firstElementChild || sm).textContent) : ''; head = head || ['Group', ...b.head]; b.rows.forEach(r => rows.push([g, ...r])); });
+      if (rows.length) out.push({ title: ct, head, rows });
+    }
+    tb.filter(t => !(grouped.length > 2 && new Set(grouped.map(sig)).size === 1 && t.closest('details'))).forEach(t => { const b = tableBlock(t, headingFor(t, card) || ct); if (b) out.push(b); });
+    [...card.querySelectorAll('.hb')].filter(x => ownCard(x, card)).forEach(hb => { const rows = [...hb.querySelectorAll('.hbr')].map(r => { const l = r.querySelector('.hbl'), tx = l && l.querySelector('.hbtx'), sm = l && l.querySelector('small'); return [clean(tx ? tx.textContent : l ? l.firstChild && l.firstChild.textContent : ''), clean(sm ? sm.textContent : ''), clean((r.querySelector('.hbv') || {}).textContent)]; }); if (rows.length) out.push({ title: headingFor(hb, card) || ct, head: ['Label', 'Detail', 'Value'], rows }); });
+    [...card.querySelectorAll('.ledger')].filter(x => ownCard(x, card)).forEach(lg => { const rows = [...lg.querySelectorAll('.lrow')].map(r => { const v = r.querySelector('.lv'), sm = v && v.querySelector('small'); return [clean((r.querySelector('.lt') || {}).textContent), clean(v ? [...v.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('') : ''), clean(sm ? sm.textContent : '')]; }); if (rows.length) out.push({ title: ct, head: ['Label', 'Value', 'Share'], rows }); });
+    [...card.querySelectorAll('.stk .stkbar')].filter(x => ownCard(x, card)).forEach(sb => { const rows = [...clean(sb.getAttribute('aria-label')).matchAll(/([^,]+?)\s+(-?[\d.]+%)(?:,|$)/g)].map(m => [clean(m[1]), m[2]]); if (rows.length) out.push({ title: ct, head: ['Label', 'Share'], rows }); });
+    return out;
+  };
+  const tilesBlock = root => { const rows = [...root.querySelectorAll('.card.stat')].map(s => { const big = s.querySelector('.big'), l = s.querySelector('.sh .l') || s.querySelector('.sh'); return [clean(l ? l.textContent : ''), clean(big ? [...big.children].map(x => clean(x.textContent)).join(' ') : '').replace(/\s+%/g, '%'), clean((s.querySelector('.s') || {}).textContent).replace(/\s*·\s*click[^·]*$/i, '')]; }).filter(r => r[0] || r[1]); return rows.length ? { title: 'Key figures', head: ['Measure', 'Value', 'Note'], rows } : null; };
+
+  /* ---- the big list tables: every row that matches the filters ---- */
+  const cfgOf = tc => { try { return Object.values(VIEWS).find(v => v && v.tcard === tc); } catch (e) { return null; } };
+  const cols = cfg => cfg.columns.filter(c => !(/split$/i.test(c.label) && !(c.key in (cfg.rows[0] || {}))));
+  const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });   /* lets the page paint between chunks, and is not slowed down in a background tab */
+  const tableRows = (cfg, onProgress) => new Promise(res => {
+    const cs = cols(cfg), src = cfg.filtered || cfg.rows || [], out = []; let i = 0;
+    const step = () => { const end = Math.min(src.length, i + 1500);
+      for (; i < end; i++) { const r = src[i]; out.push(cs.map(c => { let t = ''; try { t = blank(nodeText(c.cell(r))); } catch (e) { /* a column that cannot render stays empty */ } const raw = r[c.key]; if (typeof raw === 'string' && clean(raw).length > t.length) t = clean(raw); return t; })); }
+      if (onProgress) onProgress(i / Math.max(1, src.length));
+      if (i < src.length) tick().then(step); else res({ title: cfg.label, head: cs.map(c => c.label), rows: out }); };
+    step();
+  });
+  const busy = (el, on, label) => { el.classList.toggle('busy', on); if (label != null) { const l = el.querySelector('.dlt'); if (l) l.textContent = label; } };
+
+  /* ---- per-card button ---- */
+  const decorate = () => {
+    respBtn();
+    document.querySelectorAll('section.card, .card.chart').forEach(c => { try {
+      if (c.classList.contains('tcard') || c.classList.contains('filters') || c.classList.contains('stat') || c.querySelector(':scope > .dlic')) return;
+      if (c.querySelector('.tcard') || !blocksOf(c).length) return;
+      c.classList.add('dl-has');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'dlic'; b.title = 'Download this data (CSV)'; b.setAttribute('aria-label', 'Download ' + titleOf(c) + ' as CSV'); b.append(icon());
+      b.addEventListener('click', e => { e.stopPropagation(); const bl = blocksOf(c); if (!bl.length) return toast('Nothing to download in this card.'); saveCsv(site() + '-' + slug(titleOf(c)) + '-' + today(), bl); });
+      c.prepend(b);
+    } catch (e) { console.warn('download buttons: a card was skipped', e); } });
+    document.querySelectorAll('section.tcard').forEach(tc => { try {
+      const head = tc.querySelector('.thead'); if (!head || head.querySelector('.dlbtn')) return; const cfg = cfgOf(tc); if (!cfg) return;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm dlbtn'; b.append(icon(), Object.assign(document.createElement('span'), { className: 'dlt', textContent: 'Download CSV' }));
+      b.title = 'Download every row that matches the filters and search, with all columns';
+      b.addEventListener('click', async () => { if (b.classList.contains('busy')) return; const n = (cfg.filtered || cfg.rows || []).length; if (!n) return toast('No rows match the filters.');
+        busy(b, true, 'Preparing 0%'); try { const bl = await tableRows(cfg, p => { b.querySelector('.dlt').textContent = 'Preparing ' + Math.round(p * 100) + '%'; }); saveCsv(site() + '-' + slug((cfg.tab && cfg.tab !== 'prompts' ? cfg.tab + '-' : '') + cfg.label) + '-' + today(), [bl]); toast('Downloaded ' + n.toLocaleString('en-US') + ' rows.'); } catch (e) { toast('The download failed: ' + (e && e.message || e)); }
+        busy(b, false, 'Download CSV'); });
+      head.append(b);
+    } catch (e) { console.warn('download buttons: a table was skipped', e); } });
+  };
+
+  /* ---- the full AI responses (Share of voice tab) ---- */
+  const gunzip = async buf => new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  const mdText = b => { if (b[0] === 'h') return '#'.repeat(b[1]) + ' ' + b[2]; if (b[0] === 'li') return '  '.repeat(Math.max(0, (b[1] || 1) - 1)) + '- ' + b[2]; if (b[0] === 't') return b[1].map(r => r.join(' | ')).join('\n'); return b[1]; };
+  const respRows = async onP => {
+    const R = await unpack(DATA.resp), P = R.provs, rows = [];
+    if (R.chunk) {   /* text kept in small files, one for each block of prompts */
+      const ks = [...new Set(R.p.map(p => Math.floor(p[0] / R.chunk)))], text = {};
+      for (let i = 0; i < ks.length; i++) { onP('Preparing ' + (i + 1) + '/' + ks.length); const r = await fetch(R.dir + String(ks[i]).padStart(2, '0') + R.ext); if (!r.ok) throw new Error('HTTP ' + r.status); Object.assign(text, JSON.parse(await gunzip(await r.arrayBuffer()))); }
+      const ST = ['Answer names the brand', 'Answer does not name the brand', 'Failed', 'Empty answer'];
+      R.p.forEach(p => p[2].forEach(a => rows.push([p[0], p[1], P[a[0]], ST[a[1]] || '', a[2] || '', a[3] == null ? '' : a[3], a[4] == null ? '' : a[4], [].concat(a[5] || []).join('; '), a[6] == null ? '' : a[6], ((text[String(p[0])] || {})[String(a[0])]) || ''])));
+      return { head: ['Prompt #', 'Prompt', 'Provider', 'Status', 'Sentiment', 'Score', 'Brand mentions in the text', 'Competitors named', 'Citations', 'Answer'], rows };
+    }
+    const ST = ['Answered', 'Not run', 'Failed', 'Empty answer'];
+    R.p.forEach(p => p[2].forEach(a => rows.push([p[0], p[1], P[a[0]], ST[a[1]] || '', a[2] || '', (a[4] || []).map(mdText).join('\n\n'), (a[5] || []).map(s => (s[0] ? s[0] + ' ' : '') + (s[1] || '')).join('\n')])));
+    return { head: ['Prompt #', 'Prompt', 'Provider', 'Status', 'Model', 'Answer', 'Sources cited'], rows };
+  };
+  const respBtn = () => document.querySelectorAll('section.card').forEach(c => {
+    const h2 = c.querySelector(':scope > h2'); if (!h2 || clean(h2.textContent) !== 'Responses by prompt' || c.querySelector(':scope > .dlresp') || typeof DATA === 'undefined' || !DATA.resp) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm dlbtn dlresp'; b.style.cssText = 'align-self:flex-start;margin:8px 0'; b.append(icon(), Object.assign(document.createElement('span'), { className: 'dlt', textContent: 'Download all responses (CSV)' }));
+    b.title = 'Every AI answer for every prompt, with its provider and status';
+    b.addEventListener('click', async () => { if (b.classList.contains('busy')) return; busy(b, true, 'Preparing…');
+      try { const t = await respRows(m => { b.querySelector('.dlt').textContent = m; }); saveCsv(site() + '-ai-responses-' + today(), [{ title: 'Responses', head: t.head, rows: t.rows }]); toast('Downloaded ' + t.rows.length.toLocaleString('en-US') + ' answers.'); } catch (e) { toast('The download failed: ' + (e && e.message || e)); }
+      busy(b, false, 'Download all responses (CSV)'); });
+    const sub = h2.nextElementSibling; (sub && sub.classList.contains('sub') ? sub : h2).after(b);
+  });
+
+  /* ---- Excel workbook (stored zip, no library) ---- */
+  const enc = new TextEncoder(); const T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const deflate = async d => { if (typeof CompressionStream === 'undefined') return null; try { return new Uint8Array(await new Response(new Blob([d]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); } catch (e) { return null; } };
+  const zip = async files => { const parts = [], cen = []; let off = 0; const u16 = n => [n & 255, (n >> 8) & 255], u32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+    for (const f of files) { const nm = enc.encode(f.name), d = f.data, c = crc(d), z = d.length > 200 ? await deflate(d) : null, body = z && z.length < d.length ? z : d, m = body === d ? 0 : 8;
+      const hdr = new Uint8Array([0x50, 0x4b, 3, 4, 20, 0, 0, 8, m, 0, 0, 0, 0x21, 0, ...u32(c), ...u32(body.length), ...u32(d.length), ...u16(nm.length), 0, 0]);
+      parts.push(hdr, nm, body); cen.push(new Uint8Array([0x50, 0x4b, 1, 2, 20, 0, 20, 0, 0, 8, m, 0, 0, 0, 0x21, 0, ...u32(c), ...u32(body.length), ...u32(d.length), ...u16(nm.length), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...u32(off)]), nm); off += hdr.length + nm.length + body.length; }
+    const cl = cen.reduce((a, b) => a + b.length, 0); parts.push(...cen, new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(cl), ...u32(off), 0, 0])); return new Blob(parts, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); };
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const colRef = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const sheetXml = b => { const w = b.head.map((h, i) => Math.min(60, Math.max(8, ...[h, ...b.rows.slice(0, 80).map(r => r[i])].map(x => String(x == null ? '' : x).length)) + 2));
+    const cellX = (v, r, c, s) => { v = v == null ? '' : v; const t = num(v), ref = colRef(c) + r; if (v === '') return ''; if (/^-?\d+(\.\d+)?$/.test(t) && !/^-?0\d/.test(t) && String(t).replace(/^-/, '').replace('.', '').length < 16) return '<c r="' + ref + '"' + (s ? ' s="1"' : '') + '><v>' + t + '</v></c>'; return '<c r="' + ref + '" t="inlineStr"' + (s ? ' s="1"' : '') + '><is><t xml:space="preserve">' + esc(String(v).slice(0, 32000)) + '</t></is></c>'; };
+    const rows = [b.head, ...b.rows].map((r, i) => '<row r="' + (i + 1) + '">' + r.map((v, c) => cellX(v, i + 1, c, i === 0)).join('') + '</row>').join('');
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>' + w.map((x, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + x + '" customWidth="1"/>').join('') + '</cols><sheetData>' + rows + '</sheetData></worksheet>'; };
+  const xlsx = async sheets => { const used = new Set(), names = sheets.map(s => { let n = String(s.title).replace(/[\[\]:*?\/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Sheet', k = 2, base = n; while (used.has(n.toLowerCase())) { const sfx = ' ' + k++; n = base.slice(0, 31 - sfx.length) + sfx; } used.add(n.toLowerCase()); return n; });
+    const f = [{ name: '[Content_Types].xml', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + sheets.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>') },
+      { name: '_rels/.rels', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>') },
+      { name: 'xl/workbook.xml', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + names.map((n, i) => '<sheet name="' + esc(n) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>') },
+      { name: 'xl/_rels/workbook.xml.rels', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>') },
+      { name: 'xl/styles.xml', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>') }];
+    sheets.forEach((s, i) => f.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: enc.encode(sheetXml(s)) })); return await zip(f); };
+
+  /* ---- the tab as one workbook ---- */
+  const viewEl = () => { try { const v = VIEWS[current]; return (v && v.el) || null; } catch (e) { return null; } };
+  const tabName = () => { try { const v = VIEWS[current]; if (!v) return String(current); const t = v.title || v.label || String(current); return v.label && !new RegExp(v.label.replace(/s$/, ''), 'i').test(t) ? t + ' ' + v.label : t; } catch (e) { return 'tab'; } };
+  const MAXROWS = 20000;
+  const fab = document.createElement('button'); fab.type = 'button'; fab.className = 'dlfab'; fab.title = 'Save every table and chart on this tab as one Excel workbook'; fab.append(icon(), Object.assign(document.createElement('span'), { className: 'dlt', textContent: 'Download this tab' }));
+  fab.addEventListener('click', async () => {
+    if (fab.classList.contains('busy')) return; const root = viewEl() || document.querySelector('main') || document.body; busy(fab, true, 'Preparing…');
+    try {
+      const sheets = [], seen = new Set(), notes = []; const tl = tilesBlock(root); if (tl) sheets.push(tl);
+      root.querySelectorAll('section.card, .card.chart').forEach(c => { if (c.classList.contains('tcard') || c.classList.contains('filters') || c.classList.contains('stat') || !c.offsetParent) return; blocksOf(c).forEach(b => { const k = b.title + '|' + b.head.join('|') + '|' + b.rows.length + '|' + (b.rows[0] || []).join('|'); if (!seen.has(k)) { seen.add(k); sheets.push(b); } }); });
+      const tc = root.querySelector('section.tcard'), cfg = tc && cfgOf(tc);
+      if (cfg) { const n = (cfg.filtered || cfg.rows || []).length; if (n <= MAXROWS) { const bl = await tableRows(cfg, p => { fab.querySelector('.dlt').textContent = 'Preparing ' + Math.round(p * 100) + '%'; }); sheets.push({ title: cfg.label + ' (all rows)', head: bl.head, rows: bl.rows }); } else notes.push('The ' + cfg.label + ' table has ' + n.toLocaleString('en-US') + ' rows, too many for this workbook. Use the Download CSV button above that table.'); }
+      if (!sheets.length) { toast('There is no table or chart on this tab to download.'); }
+      else { const info = { title: 'About', head: ['Item', 'Value'], rows: [['Dashboard', clean(document.title)], ['Tab', clean(tabName())], ['Downloaded', new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'], ['Sheets', String(sheets.length)], ...notes.map(n => ['Note', n]), ['Note', 'Each sheet holds what the matching table or chart on the page shows. Lists that show only the first rows on screen are saved as shown.']] };
+        save(site() + '-' + slug(tabName()) + '-' + today() + '.xlsx', await xlsx([info, ...sheets])); toast('Saved ' + sheets.length + ' sheets.'); }
+    } catch (e) { toast('The download failed: ' + (e && e.message || e)); }
+    busy(fab, false, 'Download this tab');
+  });
+  document.body.append(fab);
+
+  let raf = 0; const kick = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; try { decorate(); } catch (e) { console.warn('download buttons', e); } }); };
+  new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick();
+})();
+</script>
 </body>
 </html>
